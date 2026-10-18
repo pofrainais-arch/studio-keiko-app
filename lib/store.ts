@@ -13,20 +13,31 @@ type Loaded<T> = { doc: Collection<T>; etag: string | null };
 const useBlob = !!(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
 const LOCAL_DIR = path.join(process.cwd(), ".data");
 const key = (name: string) => `data/${name}.json`;
+const normEtag = (t: string) => t.replace(/^W\//, "").replace(/"/g, "");
+const errName = (e: unknown) => (e && typeof e === "object" && "name" in e ? String((e as { name: unknown }).name) : "");
 
 async function load<T>(name: string): Promise<Loaded<T>> {
   if (useBlob) {
-    const { get } = await import("@vercel/blob");
-    let res;
-    try {
-      res = await get(key(name), { access: "private", useCache: false });
-    } catch (e: unknown) {
-      if (e && typeof e === "object" && "name" in e && (e as { name: string }).name === "BlobNotFoundError") res = null;
-      else throw e;
+    const { get, head } = await import("@vercel/blob");
+    // Read the ETag from the API (head) too: put's ifMatch is checked against that one.
+    // Retry while the CDN copy is older than what head reports, so a stale read never
+    // gets written back over newer data.
+    for (let attempt = 0; ; attempt++) {
+      let etag: string, url: string;
+      try {
+        ({ etag, url } = await head(key(name)));
+      } catch (e: unknown) {
+        if (errName(e) === "BlobNotFoundError") return { doc: { items: [], seq: 0 }, etag: null };
+        throw e;
+      }
+      // Keying the URL on the ETag keeps any cache from serving an older copy.
+      const res = await get(`${url}?v=${encodeURIComponent(normEtag(etag))}`, { access: "private", useCache: false });
+      if (!res || res.statusCode !== 200 || !res.stream) throw new Error(`Lecture de ${name} impossible (${res?.statusCode ?? 404})`);
+      const text = await new Response(res.stream as ReadableStream).text();
+      if (normEtag(res.blob.etag) === normEtag(etag)) return { doc: JSON.parse(text), etag };
+      if (attempt >= 4) throw new Error(`Version incohérente de ${name} (api ${etag}, cdn ${res.blob.etag})`);
+      await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
     }
-    if (!res || res.statusCode !== 200 || !res.stream) return { doc: { items: [], seq: 0 }, etag: null };
-    const text = await new Response(res.stream).text();
-    return { doc: JSON.parse(text), etag: res.blob.etag };
   }
   try {
     const text = await fs.readFile(path.join(LOCAL_DIR, `${name}.json`), "utf8");
@@ -67,8 +78,7 @@ export async function mutate<T, R>(name: string, fn: (doc: Collection<T>) => R):
       await save(name, doc, etag);
       return result;
     } catch (e: unknown) {
-      const n = e && typeof e === "object" && "name" in e ? (e as { name: string }).name : "";
-      if (n === "BlobPreconditionFailedError" && attempt < 3) {
+      if (errName(e) === "BlobPreconditionFailedError" && attempt < 3) {
         await new Promise((r) => setTimeout(r, 150 + Math.random() * 300));
         continue;
       }

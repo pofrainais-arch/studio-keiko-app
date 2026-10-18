@@ -11,6 +11,8 @@ export async function handle<T>(fn: (user: string) => Promise<T>) {
   } catch (e) {
     if (e instanceof UserError) return NextResponse.json({ error: e.message }, { status: 400 });
     console.error(e);
-    return NextResponse.json({ error: "Erreur serveur, réessayez dans un instant." }, { status: 500 });
+    // POC: the technical detail helps diagnose from a screenshot.
+    const detail = e instanceof Error ? ` (${e.name}: ${e.message.slice(0, 160)})` : "";
+    return NextResponse.json({ error: `Erreur serveur, réessayez dans un instant.${detail}` }, { status: 500 });
   }
 }
