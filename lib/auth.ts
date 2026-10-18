@@ -1,9 +1,11 @@
 import { SignJWT, jwtVerify } from "jose";
 
 export const COOKIE = "keiko_session";
-// AUTH_SECRET if set; otherwise the Blob token, which is already a server-only secret.
+// AUTH_SECRET if set; otherwise derived from the team password (changing it logs everyone out).
 const rawSecret = () =>
-  process.env.AUTH_SECRET || process.env.BLOB_READ_WRITE_TOKEN || (process.env.NODE_ENV === "production" ? "" : "dev-secret-change-me-dev-secret-change-me");
+  process.env.AUTH_SECRET ||
+  (process.env.APP_PASSWORD ? `keiko-session:${process.env.APP_PASSWORD}` : "") ||
+  (process.env.NODE_ENV === "production" ? "" : "dev-secret-change-me-dev-secret-change-me");
 export const authConfigured = () => !!rawSecret();
 const secret = () => new TextEncoder().encode(rawSecret() || "unconfigured");
 

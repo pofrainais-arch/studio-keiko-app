@@ -15,12 +15,12 @@ npm install
 npm run dev   # http://localhost:3000, mot de passe local : keiko
 ```
 
-Sans `BLOB_READ_WRITE_TOKEN`, les données sont stockées dans `.data/`.
+Sans store Blob connecté, les données sont stockées dans `.data/`.
 
 ## Variables d'environnement (Vercel)
 
 | Variable | Rôle |
 | --- | --- |
 | `APP_PASSWORD` | Mot de passe partagé de l'équipe |
-| `AUTH_SECRET` | Optionnel : secret de signature des sessions. À défaut, le token Blob est utilisé. |
-| `BLOB_READ_WRITE_TOKEN` | Ajouté automatiquement en connectant un store Vercel Blob (privé) au projet |
+| `AUTH_SECRET` | Optionnel : secret de signature des sessions. À défaut, il est dérivé de `APP_PASSWORD` (changer le mot de passe déconnecte tout le monde). |
+| `BLOB_STORE_ID` ou `BLOB_READ_WRITE_TOKEN` | Ajouté automatiquement en connectant un store Vercel Blob (privé) au projet |

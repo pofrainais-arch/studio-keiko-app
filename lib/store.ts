@@ -9,7 +9,8 @@ import path from "path";
 export type Collection<T> = { items: T[]; seq: number };
 type Loaded<T> = { doc: Collection<T>; etag: string | null };
 
-const useBlob = !!process.env.BLOB_READ_WRITE_TOKEN;
+// BLOB_STORE_ID: newer Vercel Blob stores authenticate with the deployment OIDC token.
+const useBlob = !!(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
 const LOCAL_DIR = path.join(process.cwd(), ".data");
 const key = (name: string) => `data/${name}.json`;
 
