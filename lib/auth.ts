@@ -1,7 +1,11 @@
 import { SignJWT, jwtVerify } from "jose";
 
 export const COOKIE = "keiko_session";
-const secret = () => new TextEncoder().encode(process.env.AUTH_SECRET || "dev-secret-change-me-dev-secret-change-me");
+// AUTH_SECRET if set; otherwise the Blob token, which is already a server-only secret.
+const rawSecret = () =>
+  process.env.AUTH_SECRET || process.env.BLOB_READ_WRITE_TOKEN || (process.env.NODE_ENV === "production" ? "" : "dev-secret-change-me-dev-secret-change-me");
+export const authConfigured = () => !!rawSecret();
+const secret = () => new TextEncoder().encode(rawSecret() || "unconfigured");
 
 export type Session = { name: string };
 
@@ -14,7 +18,7 @@ export async function createToken(name: string) {
 }
 
 export async function verifyToken(token?: string): Promise<Session | null> {
-  if (!token) return null;
+  if (!token || !authConfigured()) return null;
   try {
     const { payload } = await jwtVerify(token, secret());
     return typeof payload.name === "string" ? { name: payload.name } : null;

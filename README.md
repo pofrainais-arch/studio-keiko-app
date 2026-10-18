@@ -22,5 +22,5 @@ Sans `BLOB_READ_WRITE_TOKEN`, les données sont stockées dans `.data/`.
 | Variable | Rôle |
 | --- | --- |
 | `APP_PASSWORD` | Mot de passe partagé de l'équipe |
-| `AUTH_SECRET` | Secret de signature des sessions (32 caractères aléatoires minimum) |
+| `AUTH_SECRET` | Optionnel : secret de signature des sessions. À défaut, le token Blob est utilisé. |
 | `BLOB_READ_WRITE_TOKEN` | Ajouté automatiquement en connectant un store Vercel Blob (privé) au projet |
