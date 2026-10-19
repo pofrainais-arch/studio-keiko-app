@@ -7,7 +7,7 @@ export const BLANK = "[●]";
 
 export const OFI = {
   nom: "OFI INVEST ASSET MANAGEMENT",
-  siege: BLANK, // à compléter quand le service juridique l'aura arrêté
+  siege: "127-129, quai du Président Roosevelt, 92130 Issy-les-Moulineaux",
   rcsNumero: "384 940 342",
   representant: "Guillaume Poli",
 };
