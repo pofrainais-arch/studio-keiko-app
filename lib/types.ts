@@ -37,7 +37,7 @@ export type Devis = {
 
 export type Realisation = {
   id: string;
-  nature: "interne" | "externe";
+  nature: "interne" | "externe" | "partenaire";
   titre: string;
   date: string;
   demandeur: string;
@@ -48,7 +48,7 @@ export type Realisation = {
   options: Partial<Record<OptionId, boolean>>;
   postprod: number;
   ajust: number;
-  facture: number; // HT facturé (externe)
+  facture: number; // HT facturé (externe seulement; partenaire = prestation non facturée)
   refFact?: string;
   equipe: string[];
   diffusion?: string;

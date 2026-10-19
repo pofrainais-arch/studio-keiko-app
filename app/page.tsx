@@ -11,13 +11,14 @@ const PERIODS = [
   { id: "12m", label: "12 derniers mois" }, { id: "tout", label: "Tout" }, { id: "perso", label: "Personnalisé" },
 ] as const;
 type PeriodId = (typeof PERIODS)[number]["id"];
-type Nat = "tout" | "interne" | "externe";
+type Nat = "tout" | "interne" | "partenaire" | "externe";
 
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const isExt = (r: Realisation) => r.nature === "externe";
 const billed = (r: Realisation) => (isExt(r) ? +r.facture || +r.valeur || 0 : 0);
-const internalVal = (r: Realisation) => (isExt(r) ? 0 : +r.valeur || 0);
-const amount = (r: Realisation) => billed(r) + internalVal(r);
+const internalVal = (r: Realisation) => (r.nature === "interne" ? +r.valeur || 0 : 0);
+const partnerVal = (r: Realisation) => (r.nature === "partenaire" ? +r.valeur || 0 : 0);
+const amount = (r: Realisation) => billed(r) + internalVal(r) + partnerVal(r);
 const pl = (n: number, w: string) => `${n} ${w}${n > 1 ? "s" : ""}`;
 
 function range(period: PeriodId, from: string, to: string) {
@@ -30,15 +31,15 @@ function range(period: PeriodId, from: string, to: string) {
   return { from: "1900-01-01", to: "2999-12-31", label: "depuis le début" };
 }
 
-type G = { k: string; n: number; v: number; f: number; i: number };
+type G = { k: string; n: number; v: number; f: number; i: number; p: number };
 function group(rows: Realisation[], key: (r: Realisation) => string | string[] | undefined): G[] {
   const m: Record<string, G> = {};
   rows.forEach((r) => {
     const keys = ([] as (string | undefined)[]).concat(key(r));
     keys.forEach((k0) => {
       const k = k0 || "Non précisé";
-      m[k] ??= { k, n: 0, v: 0, f: 0, i: 0 };
-      m[k].n++; m[k].v += amount(r); m[k].f += billed(r); m[k].i += internalVal(r);
+      m[k] ??= { k, n: 0, v: 0, f: 0, i: 0, p: 0 };
+      m[k].n++; m[k].v += amount(r); m[k].f += billed(r); m[k].i += internalVal(r); m[k].p += partnerVal(r);
     });
   });
   return Object.values(m);
@@ -58,6 +59,7 @@ function HBars({ items, metric }: { items: G[]; metric: "v" | "n" }) {
             {metric === "n" ? <div className="fill" style={{ width: `${(i.n / max) * 100}%` }} /> : <>
               <div className="fill" style={{ width: `${(i.f / max) * 100}%` }} />
               <div className="fill i" style={{ width: `${(i.i / max) * 100}%` }} />
+              <div className="fill p" style={{ width: `${(i.p / max) * 100}%` }} />
             </>}
           </div>
         </div>
@@ -75,13 +77,13 @@ function MonthChart({ rows, rg, period }: { rows: Realisation[]; rg: { from: str
   }
   const now = new Date();
   if (end > now && period !== "perso") end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  const months: { key: string; label: string; y: number; n: number; f: number; i: number }[] = [];
+  const months: { key: string; label: string; y: number; n: number; f: number; i: number; p: number }[] = [];
   for (let d = new Date(start.getFullYear(), start.getMonth(), 1); d <= end && months.length < 60; d = new Date(d.getFullYear(), d.getMonth() + 1, 1))
-    months.push({ key: iso(d).slice(0, 7), label: MONTHS[d.getMonth()], y: d.getFullYear(), n: 0, f: 0, i: 0 });
-  rows.forEach((r) => { const m = months.find((x) => x.key === r.date.slice(0, 7)); if (m) { m.n++; m.f += billed(r); m.i += internalVal(r); } });
+    months.push({ key: iso(d).slice(0, 7), label: MONTHS[d.getMonth()], y: d.getFullYear(), n: 0, f: 0, i: 0, p: 0 });
+  rows.forEach((r) => { const m = months.find((x) => x.key === r.date.slice(0, 7)); if (m) { m.n++; m.f += billed(r); m.i += internalVal(r); m.p += partnerVal(r); } });
   if (!months.length || !rows.length) return <p className="hint" style={{ margin: 0 }}>Rien sur la période.</p>;
   const W = Math.max(560, months.length * 58), H = 230, pl0 = 56, pr = 10, pt = 26, pb = 34, iw = W - pl0 - pr, ih = H - pt - pb;
-  const max = Math.max(...months.map((m) => m.f + m.i)) || 1;
+  const max = Math.max(...months.map((m) => m.f + m.i + m.p)) || 1;
   const step = Math.pow(10, Math.floor(Math.log10(max)));
   const nice = [1, 2, 2.5, 5, 10].map((k) => k * step).find((s) => max / s <= 5) || step * 10;
   const top = Math.ceil(max / nice) * nice;
@@ -93,13 +95,14 @@ function MonthChart({ rows, rg, period }: { rows: Realisation[]; rg: { from: str
         <g key={t}><line className="grid" x1={pl0} x2={W - pr} y1={y} y2={y} /><text x={pl0 - 8} y={y + 4} textAnchor="end">{t >= 1000 ? `${(t / 1000).toLocaleString("fr-FR")} k` : t}</text></g>
       ); })}
       {months.map((m, i) => {
-        const hf = (m.f / top) * ih, hi = (m.i / top) * ih, x = pl0 + i * bw + bw * 0.18, w = bw * 0.64, yb = pt + ih;
-        const tip = `${m.label} ${m.y} : ${eur(m.f)} facturés, ${eur(m.i)} de valeur interne, ${m.n} vidéo(s)`;
+        const hf = (m.f / top) * ih, hi = (m.i / top) * ih, hp = (m.p / top) * ih, x = pl0 + i * bw + bw * 0.18, w = bw * 0.64, yb = pt + ih;
+        const tip = `${m.label} ${m.y} : ${eur(m.f)} facturés, ${eur(m.i)} de valeur interne, ${eur(m.p)} de valeur partenaires, ${m.n} vidéo(s)`;
         return (
           <g key={m.key}>
             {hf > 0 && <rect className="b1" x={x} y={yb - hf} width={w} height={hf}><title>{tip}</title></rect>}
             {hi > 0 && <rect className="b2" x={x} y={yb - hf - hi} width={w} height={hi}><title>{tip}</title></rect>}
-            {m.n > 0 && <text className="v" x={x + w / 2} y={yb - hf - hi - 6} textAnchor="middle">{m.n}</text>}
+            {hp > 0 && <rect className="b3" x={x} y={yb - hf - hi - hp} width={w} height={hp}><title>{tip}</title></rect>}
+            {m.n > 0 && <text className="v" x={x + w / 2} y={yb - hf - hi - hp - 6} textAnchor="middle">{m.n}</text>}
             <text x={x + w / 2} y={H - pb + 16} textAnchor="middle">{m.label}</text>
             {(i === 0 || m.label === "janv.") && <text x={x + w / 2} y={H - pb + 29} textAnchor="middle">{m.y}</text>}
           </g>
@@ -127,8 +130,8 @@ export default function Dashboard() {
 
   const rg = range(period, from, to);
   const rows = useMemo(() => (reals || []).filter((r) => r.date >= rg.from && r.date <= rg.to && (nat === "tout" || r.nature === nat)), [reals, rg.from, rg.to, nat]);
-  const ext = rows.filter(isExt), int = rows.filter((r) => !isExt(r));
-  const F = ext.reduce((s, r) => s + billed(r), 0), I = int.reduce((s, r) => s + internalVal(r), 0);
+  const ext = rows.filter(isExt), int = rows.filter((r) => r.nature === "interne"), par = rows.filter((r) => r.nature === "partenaire");
+  const F = ext.reduce((s, r) => s + billed(r), 0), I = int.reduce((s, r) => s + internalVal(r), 0), P = par.reduce((s, r) => s + partnerVal(r), 0);
   const mins = rows.reduce((s, r) => s + (+r.duree || 0), 0);
   const fmts = rows.reduce((s, r) => s + (+(r.formats || 0)), 0);
 
@@ -141,9 +144,10 @@ export default function Dashboard() {
   const byDem = group(int, (r) => r.demandeur);
   const byEnt = group(int, (r) => r.entite);
   const byCli = group(ext, (r) => r.demandeur);
+  const byPar = group(par, (r) => r.demandeur);
   const byTeam = group(rows, (r) => (r.equipe?.length ? r.equipe : undefined));
   const byDiff = group(rows, (r) => r.diffusion);
-  const natTxt = nat === "tout" ? "" : nat === "interne" ? " (interne)" : " (externe)";
+  const natTxt = nat === "tout" ? "" : nat === "interne" ? " (interne)" : nat === "partenaire" ? " (partenaires)" : " (externe)";
 
   function summary() {
     const L: string[] = [];
@@ -151,14 +155,16 @@ export default function Dashboard() {
     L.push(`• ${pl(rows.length, "vidéo")} réalisée${rows.length > 1 ? "s" : ""}, ${fmtMin(mins)} minutes produites`);
     if (ext.length) L.push(`• Externe : ${pl(ext.length, "vidéo")} facturée${ext.length > 1 ? "s" : ""}, ${eur(F)} HT de chiffre d'affaires`);
     if (int.length) L.push(`• Interne : ${pl(int.length, "vidéo")} pour les services d'Ofi Invest, non facturée${int.length > 1 ? "s" : ""}, représentant ${eur(I)} HT au tarif du studio`);
-    if (ext.length && int.length) L.push(`• Valeur totale produite : ${eur(F + I)} HT`);
+    if (par.length) L.push(`• Partenaires : ${pl(par.length, "vidéo")} réalisée${par.length > 1 ? "s" : ""} pour ${pl(new Set(par.map((r) => r.demandeur)).size, "partenaire")}, non facturée${par.length > 1 ? "s" : ""}, représentant ${eur(P)} HT au tarif du studio`);
+    if ([ext.length, int.length, par.length].filter(Boolean).length > 1) L.push(`• Valeur totale produite : ${eur(F + I + P)} HT, dont ${eur(I + P)} HT de prestations non facturées`);
     if (decided.length) L.push(`• Devis : ${pl(accepted.length, "devis")} accepté${accepted.length > 1 ? "s" : ""} sur ${decided.length} (${Math.round((accepted.length / decided.length) * 100)} %), ${pending.length} en attente de réponse`);
     L.push("", "Répartition par type :");
     [...byType].sort((a, b) => b.v - a.v).forEach((t) => L.push(`  – ${t.k} : ${pl(t.n, "vidéo")}, ${eur(t.v)}`));
     if (byDem.length) { L.push("", "Principaux services internes :"); [...byDem].sort((a, b) => b.v - a.v).slice(0, 5).forEach((t) => L.push(`  – ${t.k} : ${pl(t.n, "vidéo")}, ${eur(t.v)} de valeur`)); }
     if (byEnt.some((e) => e.k !== "Non précisé")) { L.push("", "Par entité :"); [...byEnt].sort((a, b) => b.v - a.v).forEach((t) => L.push(`  – ${t.k} : ${pl(t.n, "vidéo")}, ${eur(t.v)} de valeur`)); }
+    if (byPar.length) { L.push("", "Partenaires :"); [...byPar].sort((a, b) => b.v - a.v).slice(0, 5).forEach((t) => L.push(`  – ${t.k} : ${pl(t.n, "vidéo")}, ${eur(t.v)} de valeur offerte`)); }
     if (byCli.length) { L.push("", "Clients externes :"); [...byCli].sort((a, b) => b.v - a.v).slice(0, 5).forEach((t) => L.push(`  – ${t.k} : ${pl(t.n, "vidéo")}, ${eur(t.v)} facturés`)); }
-    L.push("", "Valeur interne calculée sur la grille du guide de réservation 2026 (captation dégressive, forfaits studio, post-production 80 €/h).");
+    L.push("", "Valeurs interne et partenaires calculées sur la grille du guide de réservation 2026 (captation dégressive, forfaits studio, post-production 80 €/h).");
     return L.join("\n");
   }
 
@@ -166,11 +172,11 @@ export default function Dashboard() {
     try { await navigator.clipboard.writeText(summary()); setMsg("Synthèse copiée."); } catch { setMsg("Copie impossible : sélectionnez le texte."); }
   }
   function exportCsv() {
-    const cols = ["Date", "Nature", "Titre", "Client / service", "Entité", "Type", "Durée (min)", "Statut", "Chiffrage grille HT (€)", "Montant facturé HT (€)", "Valeur interne HT (€)", "N° devis / facture", "Post-prod (h)", "Équipe", "Diffusion", "Déclinaisons", "Lien", "Notes", "Saisi par"];
+    const cols = ["Date", "Nature", "Titre", "Client / service", "Entité", "Type", "Durée (min)", "Statut", "Chiffrage grille HT (€)", "Montant facturé HT (€)", "Valeur interne HT (€)", "Valeur partenaire HT (€)", "N° devis / facture", "Post-prod (h)", "Équipe", "Diffusion", "Déclinaisons", "Lien", "Notes", "Saisi par"];
     const q = (v: unknown) => { const s = v == null ? "" : String(v); return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
     const num = (n: number) => String(Math.round((+n || 0) * 100) / 100).replace(".", ",");
     const lines = [cols.join(";"), ...[...rows].sort((a, b) => (a.date < b.date ? -1 : 1)).map((r) =>
-      [frDate(r.date), isExt(r) ? "Externe" : "Interne", r.titre, r.demandeur, r.entite, typeLabel(r.type), num(r.duree), r.statut === "cours" ? "En cours" : "Livré", num(r.valeur), num(billed(r)), num(internalVal(r)), r.refFact, num(r.postprod), (r.equipe || []).join(", "), r.diffusion, r.formats || 0, r.lien, r.notes, r.saisiPar].map(q).join(";"))];
+      [frDate(r.date), isExt(r) ? "Externe" : r.nature === "partenaire" ? "Partenaire" : "Interne", r.titre, r.demandeur, r.entite, typeLabel(r.type), num(r.duree), r.statut === "cours" ? "En cours" : "Livré", num(r.valeur), num(billed(r)), num(internalVal(r)), num(partnerVal(r)), r.refFact, num(r.postprod), (r.equipe || []).join(", "), r.diffusion, r.formats || 0, r.lien, r.notes, r.saisiPar].map(q).join(";"))];
     const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -194,7 +200,7 @@ export default function Dashboard() {
         <div className="panel-head">
           <div className="chips">{PERIODS.map((p) => <button key={p.id} className="chip" aria-pressed={period === p.id} onClick={() => setPeriod(p.id)}>{p.label}</button>)}</div>
           <div className="chips">
-            {(["tout", "interne", "externe"] as Nat[]).map((n) => <button key={n} className="chip" aria-pressed={nat === n} onClick={() => setNat(n)}>{n === "tout" ? "Interne et externe" : n === "interne" ? "Interne seulement" : "Externe seulement"}</button>)}
+            {(["tout", "externe", "interne", "partenaire"] as Nat[]).map((n) => <button key={n} className="chip" aria-pressed={nat === n} onClick={() => setNat(n)}>{n === "tout" ? "Toutes natures" : n === "interne" ? "Interne" : n === "partenaire" ? "Partenaires" : "Externe"}</button>)}
           </div>
         </div>
         {period === "perso" && (
@@ -210,23 +216,25 @@ export default function Dashboard() {
       )}
 
       <div className="kpis">
-        <div className="kpi"><span className="eyebrow">vidéos réalisées</span><span className="v">{rows.length}</span><span className="d">{int.length} internes · {ext.length} externes{fmts ? ` · + ${fmts} déclinaisons` : ""}</span></div>
+        <div className="kpi"><span className="eyebrow">vidéos réalisées</span><span className="v">{rows.length}</span><span className="d">{pl(ext.length, "externe")} · {pl(int.length, "interne")} · {pl(par.length, "partenaire")}{fmts ? ` · + ${fmts} déclinaisons` : ""}</span></div>
         <div className="kpi"><span className="eyebrow">facturé HT (externe)</span><span className="v" style={{ color: "var(--accent)" }}>{eur(F)}</span><span className="d">{pl(new Set(ext.map((r) => r.demandeur)).size, "client")}</span></div>
         <div className="kpi"><span className="eyebrow">valeur interne HT</span><span className="v" style={{ color: "var(--int)" }}>{eur(I)}</span><span className="d">{pl(new Set(int.map((r) => r.demandeur)).size, "service")} Ofi Invest, non facturé</span></div>
+        <div className="kpi"><span className="eyebrow">valeur partenaires HT</span><span className="v" style={{ color: "var(--par)" }}>{eur(P)}</span><span className="d">{pl(new Set(par.map((r) => r.demandeur)).size, "partenaire")}, non facturé</span></div>
         <div className="kpi"><span className="eyebrow">devis en attente</span><span className="v">{pending.length}</span><span className="d">{eur(pending.reduce((s, d) => s + lastV(d).totalHT, 0))} HT{decided.length ? ` · ${Math.round((accepted.length / decided.length) * 100)} % acceptés sur la période` : ""}</span></div>
       </div>
 
       <div className="panel">
         <div className="panel-head"><h3>Évolution mensuelle</h3>
-          <div className="legend"><span><i style={{ background: "var(--accent)" }} />Facturé (externe)</span><span><i style={{ background: "var(--int)" }} />Valeur interne</span><span>chiffre au-dessus : nombre de vidéos</span></div>
+          <div className="legend"><span><i style={{ background: "var(--accent)" }} />Facturé (externe)</span><span><i style={{ background: "var(--int)" }} />Valeur interne</span><span><i style={{ background: "var(--par)" }} />Valeur partenaires</span><span>chiffre au-dessus : nombre de vidéos</span></div>
         </div>
         <div className="panel-body chartbox"><MonthChart rows={rows} rg={rg} period={period} /></div>
       </div>
 
       <div className="reports">
-        <div className="panel wide"><div className="panel-head"><h3>Par type de réalisation</h3><span className="hint">facturé + valeur interne · {fmtMin(mins)} min produites</span></div><div className="panel-body"><HBars items={byType} metric="v" /></div></div>
+        <div className="panel wide"><div className="panel-head"><h3>Par type de réalisation</h3><span className="hint">facturé + valeur non facturée · {fmtMin(mins)} min produites</span></div><div className="panel-body"><HBars items={byType} metric="v" /></div></div>
         <div className="panel"><div className="panel-head"><h3>Par service Ofi Invest</h3><span className="hint">valeur interne</span></div><div className="panel-body"><HBars items={byDem} metric="v" /></div></div>
         <div className="panel"><div className="panel-head"><h3>Par entité</h3><span className="hint">valeur interne</span></div><div className="panel-body"><HBars items={byEnt} metric="v" /></div></div>
+        <div className="panel"><div className="panel-head"><h3>Par partenaire</h3><span className="hint">valeur offerte</span></div><div className="panel-body"><HBars items={byPar} metric="v" /></div></div>
         <div className="panel"><div className="panel-head"><h3>Par client externe</h3><span className="hint">montant facturé</span></div><div className="panel-body"><HBars items={byCli} metric="v" /></div></div>
         <div className="panel"><div className="panel-head"><h3>Par membre de l'équipe</h3><span className="hint">nombre de vidéos</span></div><div className="panel-body"><HBars items={byTeam} metric="n" /></div></div>
         <div className="panel wide"><div className="panel-head"><h3>Par canal de diffusion</h3><span className="hint">nombre de vidéos</span></div><div className="panel-body"><HBars items={byDiff} metric="n" /></div></div>

@@ -7,7 +7,7 @@ import { OPTIONS, TYPES, defaultOptions, eur, fmtMin, parseDuree, price, todayIS
 import type { Realisation } from "@/lib/types";
 
 type Form = {
-  nature: "interne" | "externe";
+  nature: "interne" | "externe" | "partenaire";
   titre: string; date: string; demandeur: string; entite: string;
   type: TypeId; duree: string; statut: "livre" | "cours";
   options: Partial<Record<OptionId, boolean>>;
@@ -61,6 +61,7 @@ export default function RealisationForm({ id }: { id?: string }) {
   }, [id]);
 
   const ext = form.nature === "externe";
+  const par = form.nature === "partenaire";
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
   const duree = parseDuree(form.duree);
   const opts = ext ? form.options : defaultOptions(form.type);
@@ -74,7 +75,7 @@ export default function RealisationForm({ id }: { id?: string }) {
 
   function setNature(n: Form["nature"]) {
     try { localStorage.setItem("keiko-nature", n); } catch {}
-    setForm((f) => ({ ...f, nature: n, options: n === "interne" ? defaultOptions(f.type) : f.options }));
+    setForm((f) => ({ ...f, nature: n, options: n !== "externe" ? defaultOptions(f.type) : f.options }));
   }
 
   async function submit(e: React.FormEvent) {
@@ -82,11 +83,11 @@ export default function RealisationForm({ id }: { id?: string }) {
     const miss: string[] = [];
     if (!form.titre.trim()) miss.push("le titre");
     if (!form.date) miss.push("la date");
-    if (!form.demandeur.trim()) miss.push(ext ? "le client" : "le service demandeur");
+    if (!form.demandeur.trim()) miss.push(ext ? "le client" : par ? "le partenaire" : "le service demandeur");
     if (isNaN(duree) || duree < 0) miss.push("la durée (ex. 12 ou 12:30)");
     if (miss.length) { setMsg({ t: `Il manque ${miss.join(", ")}.`, ok: false }); return; }
     const body = {
-      nature: form.nature, titre: form.titre.trim(), date: form.date, demandeur: form.demandeur.trim(), entite: ext ? "" : form.entite.trim(),
+      nature: form.nature, titre: form.titre.trim(), date: form.date, demandeur: form.demandeur.trim(), entite: form.nature === "interne" ? form.entite.trim() : "",
       type: form.type, duree, statut: form.statut, options: opts, postprod: +form.postprod || 0,
       ajust: ext ? +form.ajust || 0 : 0, facture: ext ? +form.facture || 0 : 0, refFact: ext ? form.refFact.trim() : "",
       equipe: form.equipe.split(",").map((s) => s.trim()).filter(Boolean), diffusion: form.diffusion,
@@ -101,7 +102,7 @@ export default function RealisationForm({ id }: { id?: string }) {
         const r = await api<Realisation>("/api/realisations", { method: "POST", body });
         setAll((a) => [...a, r]);
         setForm((f) => ({ ...blank(f.nature) }));
-        setMsg({ t: `« ${r.titre} » enregistrée (${ext ? `${eur(r.facture)} HT facturés` : `${eur(r.valeur)} HT de valeur interne`}). Vous pouvez saisir la suivante.`, ok: true });
+        setMsg({ t: `« ${r.titre} » enregistrée (${ext ? `${eur(r.facture)} HT facturés` : `${eur(r.valeur)} HT de valeur ${par ? "partenaire" : "interne"}`}). Vous pouvez saisir la suivante.`, ok: true });
       }
     } catch (err) { setMsg({ t: (err as Error).message, ok: false }); } finally { setBusy(false); }
   }
@@ -130,18 +131,19 @@ export default function RealisationForm({ id }: { id?: string }) {
             <fieldset>
               <legend className="eyebrow">L'essentiel</legend>
               <div className="seg" role="radiogroup" aria-label="Nature de la réalisation">
-                <button type="button" role="radio" data-nature="interne" aria-checked={!ext} onClick={() => setNature("interne")}><b>Interne</b><span>Service Ofi Invest · non facturée</span></button>
+                <button type="button" role="radio" data-nature="interne" aria-checked={form.nature === "interne"} onClick={() => setNature("interne")}><b>Interne</b><span>Service Ofi Invest · non facturée</span></button>
+                <button type="button" role="radio" data-nature="partenaire" aria-checked={par} onClick={() => setNature("partenaire")}><b>Partenaire</b><span>Prestation offerte · non facturée</span></button>
                 <button type="button" role="radio" data-nature="externe" aria-checked={ext} onClick={() => setNature("externe")}><b>Externe</b><span>Client · facturée</span></button>
               </div>
               <label className="f"><span>Titre de la vidéo <span className="req">*</span></span>
                 <input type="text" id="titre" value={form.titre} onChange={(e) => set("titre", e.target.value)} placeholder="ex. Interview CIO, perspectives marchés T4" />
               </label>
               <div className="g2">
-                <label className="f"><span>{ext ? "Client (société)" : "Service demandeur"} <span className="req">*</span></span>
-                  <input type="text" id="demandeur" list="demandeurs" value={form.demandeur} onChange={(e) => set("demandeur", e.target.value)} placeholder={ext ? "ex. Cabinet Bertrand Patrimoine" : "ex. Communication corporate"} />
+                <label className="f"><span>{ext ? "Client (société)" : par ? "Partenaire" : "Service demandeur"} <span className="req">*</span></span>
+                  <input type="text" id="demandeur" list="demandeurs" value={form.demandeur} onChange={(e) => set("demandeur", e.target.value)} placeholder={ext ? "ex. Cabinet Bertrand Patrimoine" : par ? "ex. Association partenaire" : "ex. Communication corporate"} />
                   <datalist id="demandeurs">{demandeurs.map((d) => <option key={d} value={d} />)}</datalist>
                 </label>
-                {!ext && (
+                {form.nature === "interne" && (
                   <label className="f">Entité
                     <input type="text" id="entite" list="entites" value={form.entite} onChange={(e) => set("entite", e.target.value)} placeholder="ex. Ofi Invest Asset Management" />
                     <datalist id="entites">{entites.map((d) => <option key={d} value={d} />)}</datalist>
@@ -226,11 +228,11 @@ export default function RealisationForm({ id }: { id?: string }) {
 
         <aside className="panel sticky" aria-label="Valorisation">
           <div className="total">
-            <span className="eyebrow">{ext ? "Chiffrage HT" : "Valeur interne HT"}</span>
-            <span className="amt" style={{ color: ext ? "var(--accent)" : "var(--int)" }}>{eur(ext && +form.facture ? +form.facture : calc.total)}</span>
+            <span className="eyebrow">{ext ? "Chiffrage HT" : par ? "Valeur partenaire HT" : "Valeur interne HT"}</span>
+            <span className="amt" style={{ color: ext ? "var(--accent)" : par ? "var(--par)" : "var(--int)" }}>{eur(ext && +form.facture ? +form.facture : calc.total)}</span>
           </div>
           <div className="panel-body" style={{ gap: 12 }}>
-            <p className="hint" style={{ margin: 0 }}>{ext ? "Montant facturé au client, selon la grille du studio sauf montant saisi." : "Non facturée : ce que la vidéo aurait coûté au tarif du studio."}</p>
+            <p className="hint" style={{ margin: 0 }}>{ext ? "Montant facturé au client, selon la grille du studio sauf montant saisi." : par ? "Non facturée au partenaire : ce que la prestation aurait coûté au tarif du studio." : "Non facturée : ce que la vidéo aurait coûté au tarif du studio."}</p>
             <table className="lines"><tbody>
               {calc.lines.length ? calc.lines.map((l, i) => (
                 <tr key={i}><td>{l.label}{l.sub && <span className="sub">{l.sub}</span>}</td><td className="r">{eur(l.amount)}</td></tr>

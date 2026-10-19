@@ -142,7 +142,7 @@ function computeRealisation(input: RealisationInput): Pick<Realisation, "valeur"
     detail: lines,
     facture: ext ? +input.facture || total : 0,
     ajust: ext ? +input.ajust || 0 : 0,
-    entite: ext ? "" : input.entite || "",
+    entite: input.nature === "interne" ? input.entite || "" : "",
     refFact: ext ? input.refFact || "" : "",
   };
 }
@@ -150,7 +150,7 @@ function computeRealisation(input: RealisationInput): Pick<Realisation, "valeur"
 function validateReal(r: RealisationInput) {
   if (!r.titre?.trim()) throw new UserError("Indiquez le titre de la vidéo.");
   if (!r.date) throw new UserError("Indiquez la date de livraison.");
-  if (!r.demandeur?.trim()) throw new UserError(r.nature === "externe" ? "Indiquez le client." : "Indiquez le service demandeur.");
+  if (!r.demandeur?.trim()) throw new UserError(r.nature === "externe" ? "Indiquez le client." : r.nature === "partenaire" ? "Indiquez le partenaire." : "Indiquez le service demandeur.");
   if (!(+r.duree >= 0)) throw new UserError("La durée n'est pas valide.");
 }
 

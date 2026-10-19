@@ -23,6 +23,7 @@ export default function RealisationsList() {
     .sort((a, b) => (a.date < b.date ? 1 : -1));
   const totF = rows.reduce((s, r) => s + (r.nature === "externe" ? r.facture : 0), 0);
   const totI = rows.reduce((s, r) => s + (r.nature === "interne" ? r.valeur : 0), 0);
+  const totP = rows.reduce((s, r) => s + (r.nature === "partenaire" ? r.valeur : 0), 0);
   const mins = rows.reduce((s, r) => s + (+r.duree || 0), 0);
 
   return (
@@ -36,7 +37,7 @@ export default function RealisationsList() {
         <div className="panel-head">
           <div className="toolbar">
             <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher un titre, un service…" aria-label="Rechercher" />
-            <select value={nat} onChange={(e) => setNat(e.target.value)} aria-label="Interne ou externe"><option value="">Interne et externe</option><option value="interne">Interne</option><option value="externe">Externe</option></select>
+            <select value={nat} onChange={(e) => setNat(e.target.value)} aria-label="Nature"><option value="">Toutes les natures</option><option value="interne">Interne</option><option value="partenaire">Partenaire</option><option value="externe">Externe</option></select>
             <select value={type} onChange={(e) => setType(e.target.value)} aria-label="Type"><option value="">Tous les types</option>{TYPES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}</select>
             <select value={year} onChange={(e) => setYear(e.target.value)} aria-label="Année"><option value="">Toutes les années</option>{years.map((y) => <option key={y}>{y}</option>)}</select>
           </div>
@@ -53,16 +54,16 @@ export default function RealisationsList() {
                     <td className="mono" style={{ whiteSpace: "nowrap" }}>{frDate(r.date)}</td>
                     <td><div className="t-title"><Link href={`/realisations/${r.id}`} onClick={(e) => e.stopPropagation()}>{r.titre}</Link></div>
                       <div className="t-sub">{[r.demandeur, r.entite, r.equipe?.join(", ")].filter(Boolean).join(" · ")}</div></td>
-                    <td>{r.nature === "externe" ? <span className="pill ext">Externe</span> : <span className="pill int">Interne</span>}</td>
+                    <td>{r.nature === "externe" ? <span className="pill ext">Externe</span> : r.nature === "partenaire" ? <span className="pill par">Partenaire</span> : <span className="pill int">Interne</span>}</td>
                     <td>{typeLabel(r.type)}</td>
                     <td className="r">{fmtMin(r.duree)}</td>
-                    <td className="r">{r.nature === "externe" ? <>{eur(r.facture)}<div className="t-sub">facturé{r.refFact ? ` · ${r.refFact}` : ""}</div></> : <>{eur(r.valeur)}<div className="t-sub">valeur interne</div></>}</td>
+                    <td className="r">{r.nature === "externe" ? <>{eur(r.facture)}<div className="t-sub">facturé{r.refFact ? ` · ${r.refFact}` : ""}</div></> : <>{eur(r.valeur)}<div className="t-sub">{r.nature === "partenaire" ? "valeur partenaire" : "valeur interne"}</div></>}</td>
                     <td><span className={`pill ${r.statut}`}>{r.statut === "cours" ? "En cours" : "Livré"}</span></td>
                   </tr>
                 ))}
               </tbody>
               <tfoot><tr><td /><td className="t-sub">{rows.length} réalisation{rows.length > 1 ? "s" : ""}</td><td /><td /><td className="r mono">{fmtMin(mins)}</td>
-                <td className="r mono"><strong>{eur(totF)}</strong><div className="t-sub">facturé</div><strong>{eur(totI)}</strong><div className="t-sub">valeur interne</div></td><td /></tr></tfoot>
+                <td className="r mono"><strong>{eur(totF)}</strong><div className="t-sub">facturé</div><strong>{eur(totI)}</strong><div className="t-sub">valeur interne</div>{totP > 0 && <><strong>{eur(totP)}</strong><div className="t-sub">valeur partenaires</div></>}</td><td /></tr></tfoot>
             </table>
           )}
         </div>
