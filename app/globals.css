@@ -1,22 +1,22 @@
-/* Studio Keiko: navy console bar, teal accent for billed work, plum for internal value. */
+/* Charte Ofi Invest : Bleu 60/90/30, Rouge 60/90/30, Jaune 60/90/30, Beige 10/30/60. Police Prompt. */
 :root{
-  --ink:#14171A; --ink-soft:#5B5F5E; --paper:#F6F6F3; --surface:#FFFFFF;
-  --line:#E2E1DA; --line-strong:#C5C3B8; --accent:#007C9F; --accent-ink:#FFFFFF;
-  --accent-soft:#E2F1F5; --navy:#00313D; --on-navy:#F3F5F4; --on-navy-soft:#93A7AC;
-  --tally:#D9493C; --ok:#2F8F5B; --warn:#B7791F; --demo:#8A5A00; --demo-bg:#FFF4D6;
-  --int:#8C4F7A; --int-soft:#F5EAF1; --par:#A8741A; --par-soft:#F8EEDB;
-  --f-display:'Archivo', ui-sans-serif, system-ui, sans-serif;
-  --f-body:'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
-  --f-mono:'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --ink:#14171A; --ink-soft:#5F5C55; --paper:#F8F7F5; --surface:#FFFFFF;
+  --line:#EAE8E4; --line-strong:#C9C5BB; --accent:#007D9F; --accent-ink:#FFFFFF;
+  --accent-soft:#E5F2F5; --navy:#00485C; --on-navy:#F8F7F5; --on-navy-soft:#A9C7CF;
+  --tally:#831004; --ok:#00485C; --warn:#442F00; --demo:#442F00; --demo-bg:#FEF0D0;
+  --int:#F37A6E; --int-soft:#FDE4E2; --int-ink:#831004; --par:#FAB414; --par-soft:#FEF0D0; --par-ink:#442F00;
+  --f-display:'Prompt', ui-sans-serif, system-ui, sans-serif;
+  --f-body:'Prompt', ui-sans-serif, system-ui, sans-serif;
+  --f-mono:'Prompt', ui-sans-serif, system-ui, sans-serif;
   --shadow:0 1px 2px rgba(20,23,26,.05), 0 10px 26px -16px rgba(20,23,26,.22);
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){ :root{
-  --ink:#ECEBE6; --ink-soft:#A9AEAA; --paper:#121518; --surface:#1A1E21;
-  --line:#2C3134; --line-strong:#444B4F; --accent:#45B8DA; --accent-ink:#04212A;
-  --accent-soft:#12313A; --navy:#0A2830; --on-navy:#ECEBE6; --on-navy-soft:#8EA2A7;
-  --tally:#F08A7D; --ok:#6FCB9A; --warn:#E6B45E; --demo:#F2C566; --demo-bg:#2E2610;
-  --int:#D99BC6; --int-soft:#33212D; --par:#E0B45C; --par-soft:#33290F;
+  --ink:#F8F7F5; --ink-soft:#B8B5AD; --paper:#0E1C21; --surface:#14272E;
+  --line:#24383F; --line-strong:#3A525A; --accent:#3FB0D2; --accent-ink:#00232D;
+  --accent-soft:#0F323C; --navy:#00364A; --on-navy:#F8F7F5; --on-navy-soft:#8FB3BC;
+  --tally:#F37A6E; --ok:#8FD3E6; --warn:#FAB414; --demo:#FAB414; --demo-bg:#2E2510;
+  --int:#F37A6E; --int-soft:#3A1F1C; --int-ink:#F6A097; --par:#FAB414; --par-soft:#33280A; --par-ink:#FAB414;
   --shadow:0 1px 2px rgba(0,0,0,.4), 0 12px 28px -14px rgba(0,0,0,.6);
   color-scheme:dark; } }
 
@@ -34,7 +34,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .bar{background:var(--navy);color:var(--on-navy);position:sticky;top:0;z-index:10;box-shadow:var(--shadow)}
 .bar-in{max-width:1180px;margin:0 auto;padding:12px max(16px,env(safe-area-inset-right)) 12px max(16px,env(safe-area-inset-left));display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:space-between}
 .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
-.rec{width:10px;height:10px;border-radius:50%;background:var(--tally);box-shadow:0 0 0 3px rgba(217,73,60,.25)}
+.rec{width:10px;height:10px;border-radius:50%;background:#F37A6E;box-shadow:0 0 0 3px rgba(243,122,110,.3)}
 .brand h1{font-size:18px;color:var(--on-navy)}
 .brand .tag{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--on-navy-soft)}
 .tabs{display:flex;gap:4px;background:rgba(0,0,0,.25);padding:4px;border-radius:8px;flex-wrap:wrap}
@@ -131,8 +131,8 @@ table.list tbody tr:hover td{background:var(--paper)}
 .pill.cours,.pill.envoye{border-color:var(--warn);color:var(--warn)}
 .pill.refuse{border-color:var(--tally);color:var(--tally)}
 .pill.ext{border-color:var(--accent);color:var(--accent)}
-.pill.int{border-color:var(--int);color:var(--int)}
-.pill.par{border-color:var(--par);color:var(--par)}
+.pill.int{border-color:var(--int);color:var(--int-ink)}
+.pill.par{border-color:var(--par);color:var(--par-ink)}
 .empty{padding:36px 18px;text-align:center;color:var(--ink-soft);display:flex;flex-direction:column;gap:10px;align-items:center}
 .empty strong{color:var(--ink);font-family:var(--f-display);font-size:16px}
 
@@ -173,7 +173,7 @@ table.list tbody tr:hover td{background:var(--paper)}
 
 /* printable quote */
 .sheet{background:#fff;color:#14171A;max-width:820px;margin:0 auto;padding:40px;border:1px solid var(--line);border-radius:8px;display:flex;flex-direction:column;gap:20px}
-.sheet .top{display:flex;justify-content:space-between;gap:16px;border-bottom:2px solid #00313D;padding-bottom:14px}
+.sheet .top{display:flex;justify-content:space-between;gap:16px;border-bottom:2px solid #00485C;padding-bottom:14px}
 .sheet h3{font-size:26px;letter-spacing:.02em}
 .sheet .meta{text-align:right;font-size:12.5px;color:#5B5F5E}
 .sheet .meta b{color:#14171A;font-family:var(--f-mono)}
@@ -181,12 +181,12 @@ table.list tbody tr:hover td{background:var(--paper)}
 .sheet .parties h4{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#5B5F5E;margin:0 0 4px}
 .sheet .parties p{margin:0}
 .sheet table{width:100%;border-collapse:collapse;font-size:13px}
-.sheet th{text-align:left;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#5B5F5E;font-weight:500;padding:0 6px 8px;border-bottom:1px solid #C5C3B8}
-.sheet td{padding:7px 6px;border-bottom:1px solid #E2E1DA}
+.sheet th{text-align:left;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#5B5F5E;font-weight:500;padding:0 6px 8px;border-bottom:1px solid #C9C5BB}
+.sheet td{padding:7px 6px;border-bottom:1px solid #EAE8E4}
 .sheet .r{text-align:right;font-family:var(--f-mono);white-space:nowrap}
 .sheet tfoot td{border-bottom:0}
-.sheet tfoot tr.grand td{font-weight:700;font-size:15px;border-top:2px solid #00313D}
-.sheet .foot{font-size:11.5px;color:#5B5F5E;border-top:1px solid #E2E1DA;padding-top:12px}
+.sheet tfoot tr.grand td{font-weight:700;font-size:15px;border-top:2px solid #00485C}
+.sheet .foot{font-size:11.5px;color:#5B5F5E;border-top:1px solid #EAE8E4;padding-top:12px}
 .noprint{}
 @media print{
   @page{margin:14mm}

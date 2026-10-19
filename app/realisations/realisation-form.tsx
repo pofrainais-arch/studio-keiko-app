@@ -229,7 +229,7 @@ export default function RealisationForm({ id }: { id?: string }) {
         <aside className="panel sticky" aria-label="Valorisation">
           <div className="total">
             <span className="eyebrow">{ext ? "Chiffrage HT" : par ? "Valeur partenaire HT" : "Valeur interne HT"}</span>
-            <span className="amt" style={{ color: ext ? "var(--accent)" : par ? "var(--par)" : "var(--int)" }}>{eur(ext && +form.facture ? +form.facture : calc.total)}</span>
+            <span className="amt" style={{ color: ext ? "var(--accent)" : par ? "var(--par-ink)" : "var(--int-ink)" }}>{eur(ext && +form.facture ? +form.facture : calc.total)}</span>
           </div>
           <div className="panel-body" style={{ gap: 12 }}>
             <p className="hint" style={{ margin: 0 }}>{ext ? "Montant facturé au client, selon la grille du studio sauf montant saisi." : par ? "Non facturée au partenaire : ce que la prestation aurait coûté au tarif du studio." : "Non facturée : ce que la vidéo aurait coûté au tarif du studio."}</p>

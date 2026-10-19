@@ -27,7 +27,7 @@ export default async function Imprimer({ params, searchParams }: { params: Promi
         <div className="top">
           <div>
             <h3>DEVIS</h3>
-            <div style={{ fontSize: 13, color: "#5B5F5E" }}>{d.projet}</div>
+            <div style={{ fontSize: 13, color: "#5F5C55" }}>{d.projet}</div>
           </div>
           <div className="meta">
             <div>N° <b>{d.numero}{d.versions.length > 1 ? ` · v${ver.v}` : ""}</b></div>
