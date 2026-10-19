@@ -8,6 +8,7 @@ export const BLANK = "[●]";
 export const OFI = {
   nom: "OFI INVEST ASSET MANAGEMENT",
   siege: "127-129, quai du Président Roosevelt, 92130 Issy-les-Moulineaux",
+  rcsVille: "Nanterre", // le modèle juridique disait Paris, avant le déménagement à Issy-les-Moulineaux
   rcsNumero: "384 940 342",
   representant: "Guillaume Poli",
 };

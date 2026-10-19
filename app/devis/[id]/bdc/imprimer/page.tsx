@@ -37,7 +37,7 @@ export default async function ImprimerBdc({ params }: { params: Promise<{ id: st
 
         <section>
           <p className="legal"><b>ENTRE</b></p>
-          <p className="legal">{OFI.nom}, société anonyme dont le siège social est situé {OFI.siege}, immatriculée au RCS de Paris sous le numéro {OFI.rcsNumero}, représentée par {OFI.representant}, dûment habilité aux fins des présentes,</p>
+          <p className="legal">{OFI.nom}, société anonyme dont le siège social est situé {OFI.siege}, immatriculée au RCS de {OFI.rcsVille} sous le numéro {OFI.rcsNumero}, représentée par {OFI.representant}, dûment habilité aux fins des présentes,</p>
           <p className="legal">Ci-après le « Prestataire » ou « Ofi Invest AM »,</p>
           <p className="legal">D'une part,</p>
           <p className="legal"><b>ET</b></p>
