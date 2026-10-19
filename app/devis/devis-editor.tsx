@@ -4,10 +4,11 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/client";
 import { OPTIONS, TYPES, defaultOptions, eur, fmtMin, frDate, parseDuree, price, type OptionId, type TypeId } from "@/lib/pricing";
-import { STATUT_LABEL, type Devis } from "@/lib/types";
+import { STATUT_LABEL, type Client, type Devis } from "@/lib/types";
 
 type Form = {
   projet: string;
+  clientId: string;
   client: { nom: string; societe: string; email: string };
   type: TypeId;
   duree: string;
@@ -22,6 +23,7 @@ type Form = {
 
 const blank = (): Form => ({
   projet: "",
+  clientId: "",
   client: { nom: "", societe: "", email: "" },
   type: "studio",
   duree: "",
@@ -38,6 +40,7 @@ function fromDevis(d: Devis): Form {
   const v = d.versions[d.versions.length - 1];
   return {
     projet: d.projet,
+    clientId: d.clientId || "",
     client: { ...d.client },
     type: v.type,
     duree: v.duree ? fmtMin(v.duree) : "",
@@ -51,9 +54,10 @@ function fromDevis(d: Devis): Form {
   };
 }
 
-function toPayload(f: Form) {
+function toPayload(f: Form, clientId = "") {
   return {
     projet: f.projet,
+    clientId,
     client: f.client,
     version: {
       type: f.type,
@@ -78,6 +82,8 @@ export default function DevisEditor({ id }: { id?: string }) {
   const [msg, setMsg] = useState<{ t: string; ok?: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
+  const [clients, setClients] = useState<Client[]>([]);
+  useEffect(() => { api<Client[]>("/api/clients").then(setClients).catch(() => {}); }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -88,7 +94,9 @@ export default function DevisEditor({ id }: { id?: string }) {
   }, [id]);
 
   const dirty = JSON.stringify(form) !== saved;
-  const payload = toPayload(form);
+  const societeKey = form.client.societe.trim().toLowerCase();
+  const matched = clients.find((c) => c.id === form.clientId) || (societeKey ? clients.find((c) => c.societe.trim().toLowerCase() === societeKey) : undefined);
+  const payload = toPayload(form, matched?.id || "");
   const calc = useMemo(
     () => price({ duree: payload.version.duree, options: payload.version.options, postprod: payload.version.postprod, extras: payload.version.extras, ajust: -payload.version.remise }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -99,7 +107,12 @@ export default function DevisEditor({ id }: { id?: string }) {
   const locked = !!cur && cur.statut !== "brouillon";
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
-  const setClient = (k: keyof Form["client"], v: string) => setForm((f) => ({ ...f, client: { ...f.client, [k]: v } }));
+  const setClient = (k: keyof Form["client"], v: string) => setForm((f) => ({ ...f, clientId: k === "societe" ? "" : f.clientId, client: { ...f.client, [k]: v } }));
+  function pickClient(cid: string) {
+    const c = clients.find((x) => x.id === cid);
+    if (!c) { set("clientId", ""); return; }
+    setForm((f) => ({ ...f, clientId: c.id, client: { societe: c.societe, nom: c.contact || f.client.nom, email: c.email || f.client.email } }));
+  }
 
   async function save() {
     if (isNaN(parseDuree(form.duree)) && form.duree.trim()) { setMsg({ t: "La durée n'est pas valide (ex. 12 ou 12:30).", ok: false }); return; }
@@ -181,11 +194,26 @@ export default function DevisEditor({ id }: { id?: string }) {
               <label className="f"><span>Nom du projet <span className="req">*</span></span>
                 <input type="text" id="projet" value={form.projet} onChange={(e) => set("projet", e.target.value)} placeholder="ex. Interview expert, allocation d'actifs 2026" />
               </label>
+              {clients.length > 0 && (
+                <label className="f">Client enregistré
+                  <select id="clientId" value={matched?.id || ""} onChange={(e) => pickClient(e.target.value)}>
+                    <option value="">Autre client (saisie libre)</option>
+                    {[...clients].sort((a, b) => a.societe.localeCompare(b.societe, "fr")).map((c) => <option key={c.id} value={c.id}>{c.societe}</option>)}
+                  </select>
+                </label>
+              )}
               <div className="g3">
                 <label className="f"><span>Société <span className="req">*</span></span><input type="text" id="societe" value={form.client.societe} onChange={(e) => setClient("societe", e.target.value)} /></label>
                 <label className="f">Contact<input type="text" id="contact" value={form.client.nom} onChange={(e) => setClient("nom", e.target.value)} /></label>
                 <label className="f">E-mail<input type="email" id="email" value={form.client.email} onChange={(e) => setClient("email", e.target.value)} /></label>
               </div>
+              {form.client.societe.trim() && (!matched ? (
+                <p className="banner warn" style={{ margin: 0 }}><span>Ce client n'a pas de fiche : le contrat-cadre n'est pas suivi. <Link href={`/clients/nouveau?societe=${encodeURIComponent(form.client.societe.trim())}`} target="_blank">Créer la fiche</Link></span></p>
+              ) : !matched.contratSigneLe ? (
+                <p className="banner warn" style={{ margin: 0 }}><span>Aucun contrat-cadre signé pour {matched.societe} : à faire signer avant le bon de commande. <Link href={`/clients/${matched.id}`} target="_blank">Ouvrir la fiche</Link></span></p>
+              ) : (
+                <p className="hint" style={{ margin: 0 }}>Contrat-cadre signé le {frDate(matched.contratSigneLe)}.</p>
+              ))}
             </fieldset>
 
             <fieldset>
@@ -274,6 +302,24 @@ export default function DevisEditor({ id }: { id?: string }) {
                 </div>
                 {devis.realisationId && (
                   <p style={{ margin: 0, fontSize: 13 }}>Réalisation créée dans le registre : <Link href={`/realisations/${devis.realisationId}`}>la compléter</Link>.</p>
+                )}
+                {(cur.statut === "accepte" || devis.bdc) && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, borderTop: "1px solid var(--line)", paddingTop: 12 }}>
+                    <div className="eyebrow">Bon de commande</div>
+                    {devis.bdc ? (
+                      <>
+                        <div><span className={`pill ${devis.bdc.signeLe ? "livre" : "cours"}`}>{devis.bdc.signeLe ? `Signé le ${frDate(devis.bdc.signeLe)}` : "À signer"}</span>
+                          {devis.bdc.v !== cur.v && <span className="t-sub" style={{ display: "block" }}>repose sur la version {devis.bdc.v} du devis</span>}</div>
+                        <div className="actions">
+                          <Link className="btn small" href={`/devis/${devis.id}/bdc`}>Ouvrir</Link>
+                          <Link className="btn small" href={`/devis/${devis.id}/bdc/imprimer`} target="_blank">Imprimer / PDF</Link>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="actions"><Link className="btn small primary" href={`/devis/${devis.id}/bdc`}>Créer le bon de commande</Link></div>
+                    )}
+                    {cur.statut === "accepte" && !matched?.contratSigneLe && <p className="hint" style={{ margin: 0 }}>Aucun contrat-cadre signé suivi pour ce client.</p>}
+                  </div>
                 )}
                 <div className="actions">
                   <Link className="btn small" href={`/devis/${devis.id}/imprimer?v=${cur.v}`} target="_blank">Imprimer / PDF</Link>

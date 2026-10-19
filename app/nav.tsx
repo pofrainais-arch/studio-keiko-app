@@ -6,6 +6,7 @@ const LINKS = [
   { href: "/", label: "Tableau de bord" },
   { href: "/devis", label: "Devis" },
   { href: "/realisations", label: "Réalisations" },
+  { href: "/clients", label: "Clients" },
 ];
 
 export default function Nav({ name }: { name: string }) {

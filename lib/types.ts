@@ -22,14 +22,56 @@ export type DevisVersion = {
   decidedAt?: string;
 };
 
+export type Client = {
+  id: string;
+  societe: string;
+  forme: string; // forme sociale, ex. « société anonyme »
+  capital: string;
+  siege: string;
+  rcsVille: string;
+  rcsNumero: string;
+  representant: string;
+  fonction: string;
+  contact: string;
+  email: string;
+  contratSigneLe?: string; // date de signature du contrat-cadre (ISO)
+  contratLien?: string; // lien vers le contrat signé (GED, Drive, SharePoint)
+  notes?: string;
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string;
+};
+
+export type Bdc = {
+  v: number; // version du devis sur laquelle repose le bon de commande
+  objet: string[];
+  objetAutre: string;
+  description: string;
+  date: string;
+  horaires: string;
+  lieu: "" | "studio" | "site" | "autre";
+  lieuAutre: string;
+  moyens: string[];
+  moyensAutres: string;
+  livrables: string[];
+  livrablesDescription: string;
+  planning: { tournage: string; provisoire: string; validation: string; finale: string };
+  signeLe?: string; // le bon de commande devient ferme à la signature des deux parties
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string;
+};
+
 export type Devis = {
   id: string;
   numero: string;
   projet: string;
   client: { nom: string; societe: string; email: string };
+  clientId?: string;
   statut: DevisStatut;
   versions: DevisVersion[];
   realisationId?: string;
+  bdc?: Bdc;
   createdAt: string;
   createdBy: string;
   updatedAt: string;

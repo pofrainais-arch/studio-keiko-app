@@ -1,5 +1,5 @@
 import { handle } from "@/lib/api";
-import { deleteDevis, getDevis, saveDevis, setDevisStatut, UserError } from "@/lib/service";
+import { deleteDevis, getDevis, refreshBdc, saveBdc, saveDevis, setDevisStatut, signBdc, UserError } from "@/lib/service";
 
 export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ id: string }> };
@@ -19,6 +19,9 @@ export async function PUT(req: Request, { params }: Ctx) {
   return handle((user) => {
     if (body.action === "save") return saveDevis(id, body.data, user);
     if (["envoye", "accepte", "refuse", "brouillon"].includes(body.action)) return setDevisStatut(id, body.action, user);
+    if (body.action === "bdc-save") return saveBdc(id, body.data ?? null, user);
+    if (body.action === "bdc-refresh") return refreshBdc(id);
+    if (body.action === "bdc-sign") return signBdc(id, body.date ?? null);
     throw new UserError("Action inconnue.");
   });
 }

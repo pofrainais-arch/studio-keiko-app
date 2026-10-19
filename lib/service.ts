@@ -1,17 +1,19 @@
 import "server-only";
 import { mutate, newId, readAll } from "./store";
 import { price, todayISO, type TypeId } from "./pricing";
-import type { Devis, DevisVersion, Realisation } from "./types";
+import { defaultBdc } from "./legal";
+import type { Bdc, Client, Devis, DevisVersion, Realisation } from "./types";
 
 const DEVIS = "devis";
 const REAL = "realisations";
+const CLIENTS = "clients";
 
 export class UserError extends Error {}
 
 // ---------- devis ----------
 
 export type VersionInput = Pick<DevisVersion, "type" | "duree" | "options" | "postprod" | "extras" | "remise" | "tva" | "validite" | "remarques">;
-export type DevisInput = { projet: string; client: Devis["client"]; version: VersionInput };
+export type DevisInput = { projet: string; client: Devis["client"]; clientId?: string; version: VersionInput };
 
 function buildVersion(v: number, input: VersionInput, by: string): DevisVersion {
   const { lines, total } = price({
@@ -63,6 +65,7 @@ export async function createDevis(input: DevisInput, by: string): Promise<Devis>
       numero: `DEV-${year}-${String(countYear).padStart(3, "0")}`,
       projet: input.projet.trim(),
       client: { nom: input.client.nom?.trim() || "", societe: input.client.societe?.trim() || "", email: input.client.email?.trim() || "" },
+      clientId: input.clientId || undefined,
       statut: "brouillon",
       versions: [buildVersion(1, input.version, by)],
       createdAt: now,
@@ -84,6 +87,7 @@ export async function saveDevis(id: string, input: DevisInput, by: string): Prom
     const d = doc.items.find((x) => x.id === id);
     if (!d) throw new UserError("Devis introuvable.");
     d.projet = input.projet.trim();
+    d.clientId = input.clientId || undefined;
     d.client = { nom: input.client.nom?.trim() || "", societe: input.client.societe?.trim() || "", email: input.client.email?.trim() || "" };
     const cur = d.versions[d.versions.length - 1];
     if (cur.statut === "brouillon") {
@@ -218,5 +222,123 @@ async function upsertRealisationFromDevis(d: Devis, by: string): Promise<string>
     const r: Realisation = { ...base, ...computed, facture: v.totalHT, id: newId(), createdAt: now, updatedAt: now };
     doc.items.push(r);
     return r.id;
+  });
+}
+
+
+// ---------- clients (fiches et contrat-cadre) ----------
+
+export type ClientInput = Omit<Client, "id" | "createdAt" | "createdBy" | "updatedAt">;
+const clean = (i: ClientInput): ClientInput => ({
+  societe: String(i.societe || "").trim(),
+  forme: String(i.forme || "").trim(),
+  capital: String(i.capital || "").trim(),
+  siege: String(i.siege || "").trim(),
+  rcsVille: String(i.rcsVille || "").trim(),
+  rcsNumero: String(i.rcsNumero || "").trim(),
+  representant: String(i.representant || "").trim(),
+  fonction: String(i.fonction || "").trim(),
+  contact: String(i.contact || "").trim(),
+  email: String(i.email || "").trim(),
+  contratSigneLe: /^\d{4}-\d{2}-\d{2}$/.test(i.contratSigneLe || "") ? i.contratSigneLe : undefined,
+  contratLien: String(i.contratLien || "").trim() || undefined,
+  notes: String(i.notes || "").trim() || undefined,
+});
+
+export const listClients = () => readAll<Client>(CLIENTS);
+
+export async function createClient(input: ClientInput, by: string): Promise<Client> {
+  const c = clean(input);
+  if (!c.societe) throw new UserError("Indiquez la dénomination sociale du client.");
+  return mutate<Client, Client>(CLIENTS, (doc) => {
+    if (doc.items.some((x) => x.societe.toLowerCase() === c.societe.toLowerCase())) throw new UserError("Un client porte déjà ce nom.");
+    const now = new Date().toISOString();
+    const client: Client = { ...c, id: newId(), createdAt: now, createdBy: by, updatedAt: now };
+    doc.items.push(client);
+    return client;
+  });
+}
+
+export async function updateClient(id: string, input: ClientInput): Promise<Client> {
+  const c = clean(input);
+  if (!c.societe) throw new UserError("Indiquez la dénomination sociale du client.");
+  return mutate<Client, Client>(CLIENTS, (doc) => {
+    const i = doc.items.findIndex((x) => x.id === id);
+    if (i < 0) throw new UserError("Client introuvable.");
+    if (doc.items.some((x) => x.id !== id && x.societe.toLowerCase() === c.societe.toLowerCase())) throw new UserError("Un client porte déjà ce nom.");
+    doc.items[i] = { ...doc.items[i], ...c, updatedAt: new Date().toISOString() };
+    return doc.items[i];
+  });
+}
+
+export async function deleteClient(id: string) {
+  await mutate<Client, void>(CLIENTS, (doc) => { doc.items = doc.items.filter((x) => x.id !== id); });
+}
+
+// ---------- bon de commande (rattaché au devis accepté) ----------
+
+const BDC_STR = (v: unknown) => String(v ?? "").trim();
+const BDC_DATE = (v: unknown) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || "")) ? String(v) : "");
+const BDC_LIST = (v: unknown) => (Array.isArray(v) ? v.map(String) : []);
+
+export async function saveBdc(id: string, input: Partial<Bdc> | null, by: string): Promise<Devis> {
+  return mutate<Devis, Devis>(DEVIS, (doc) => {
+    const d = doc.items.find((x) => x.id === id);
+    if (!d) throw new UserError("Devis introuvable.");
+    const now = new Date().toISOString();
+    if (!d.bdc) {
+      if (d.statut !== "accepte") throw new UserError("Le bon de commande se crée à partir d'un devis accepté.");
+      d.bdc = defaultBdc(d.versions[d.versions.length - 1], d.projet, by);
+    } else if (d.bdc.signeLe) {
+      throw new UserError("Le bon de commande est signé : rouvrez-le pour le modifier.");
+    }
+    if (input) {
+      const p = input.planning || ({} as Bdc["planning"]);
+      d.bdc = {
+        ...d.bdc,
+        objet: BDC_LIST(input.objet),
+        objetAutre: BDC_STR(input.objetAutre),
+        description: BDC_STR(input.description),
+        date: BDC_DATE(input.date),
+        horaires: BDC_STR(input.horaires),
+        lieu: ["studio", "site", "autre"].includes(String(input.lieu)) ? (input.lieu as Bdc["lieu"]) : "",
+        lieuAutre: BDC_STR(input.lieuAutre),
+        moyens: BDC_LIST(input.moyens),
+        moyensAutres: BDC_STR(input.moyensAutres),
+        livrables: BDC_LIST(input.livrables),
+        livrablesDescription: BDC_STR(input.livrablesDescription),
+        planning: { tournage: BDC_DATE(p.tournage), provisoire: BDC_DATE(p.provisoire), validation: BDC_DATE(p.validation), finale: BDC_DATE(p.finale) },
+      };
+    }
+    d.bdc.updatedAt = now;
+    d.updatedAt = now;
+    return d;
+  });
+}
+
+/** Aligne le montant du bon de commande sur la dernière version acceptée du devis. */
+export async function refreshBdc(id: string): Promise<Devis> {
+  return mutate<Devis, Devis>(DEVIS, (doc) => {
+    const d = doc.items.find((x) => x.id === id);
+    if (!d?.bdc) throw new UserError("Pas de bon de commande pour ce devis.");
+    if (d.bdc.signeLe) throw new UserError("Le bon de commande est signé : rouvrez-le avant de le modifier.");
+    if (d.statut !== "accepte") throw new UserError("Acceptez d'abord la nouvelle version du devis.");
+    d.bdc.v = d.versions[d.versions.length - 1].v;
+    d.bdc.updatedAt = new Date().toISOString();
+    return d;
+  });
+}
+
+export async function signBdc(id: string, date: string | null): Promise<Devis> {
+  return mutate<Devis, Devis>(DEVIS, (doc) => {
+    const d = doc.items.find((x) => x.id === id);
+    if (!d?.bdc) throw new UserError("Pas de bon de commande pour ce devis.");
+    if (date === null) { delete d.bdc.signeLe; }
+    else {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new UserError("Indiquez la date de signature.");
+      d.bdc.signeLe = date;
+    }
+    d.bdc.updatedAt = new Date().toISOString();
+    return d;
   });
 }
