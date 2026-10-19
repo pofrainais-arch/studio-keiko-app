@@ -51,7 +51,7 @@ export default function DevisList() {
                 {rows.map((d) => (
                   <tr key={d.id} onClick={() => router.push(`/devis/${d.id}`)}>
                     <td className="mono"><Link href={`/devis/${d.id}`} onClick={(e) => e.stopPropagation()}>{d.numero}</Link></td>
-                    <td><div className="t-title">{d.projet}</div><div className="t-sub">{[d.client.societe, d.client.nom].filter(Boolean).join(" · ")}</div></td>
+                    <td><div className="t-title">{d.projet}</div><div className="t-sub">{[d.client.societe, d.client.service, [d.client.prenom, d.client.nom].filter(Boolean).join(" ")].filter(Boolean).join(" · ")}</div></td>
                     <td><span className={`pill ${d.statut}`}>{STATUT_LABEL[d.statut]}</span></td>
                     <td className="r">v{cur(d).v}</td>
                     <td className="r">{eur(cur(d).totalHT)}</td>

@@ -66,7 +66,7 @@ export type Devis = {
   id: string;
   numero: string;
   projet: string;
-  client: { nom: string; societe: string; email: string };
+  client: { nom: string; prenom?: string; service?: string; societe: string; email: string };
   clientId?: string;
   statut: DevisStatut;
   versions: DevisVersion[];

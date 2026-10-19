@@ -64,7 +64,7 @@ export async function createDevis(input: DevisInput, by: string): Promise<Devis>
       id: newId(),
       numero: `DEV-${year}-${String(countYear).padStart(3, "0")}`,
       projet: input.projet.trim(),
-      client: { nom: input.client.nom?.trim() || "", societe: input.client.societe?.trim() || "", email: input.client.email?.trim() || "" },
+      client: { nom: input.client.nom?.trim() || "", prenom: input.client.prenom?.trim() || "", service: input.client.service?.trim() || "", societe: input.client.societe?.trim() || "", email: input.client.email?.trim() || "" },
       clientId: input.clientId || undefined,
       statut: "brouillon",
       versions: [buildVersion(1, input.version, by)],
@@ -88,7 +88,7 @@ export async function saveDevis(id: string, input: DevisInput, by: string): Prom
     if (!d) throw new UserError("Devis introuvable.");
     d.projet = input.projet.trim();
     d.clientId = input.clientId || undefined;
-    d.client = { nom: input.client.nom?.trim() || "", societe: input.client.societe?.trim() || "", email: input.client.email?.trim() || "" };
+    d.client = { nom: input.client.nom?.trim() || "", prenom: input.client.prenom?.trim() || "", service: input.client.service?.trim() || "", societe: input.client.societe?.trim() || "", email: input.client.email?.trim() || "" };
     const cur = d.versions[d.versions.length - 1];
     if (cur.statut === "brouillon") {
       d.versions[d.versions.length - 1] = { ...buildVersion(cur.v, input.version, by), createdAt: cur.createdAt };

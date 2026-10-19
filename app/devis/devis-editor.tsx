@@ -9,7 +9,7 @@ import { STATUT_LABEL, type Client, type Devis } from "@/lib/types";
 type Form = {
   projet: string;
   clientId: string;
-  client: { nom: string; societe: string; email: string };
+  client: { nom: string; prenom: string; service: string; societe: string; email: string };
   type: TypeId;
   duree: string;
   options: Partial<Record<OptionId, boolean>>;
@@ -24,7 +24,7 @@ type Form = {
 const blank = (): Form => ({
   projet: "",
   clientId: "",
-  client: { nom: "", societe: "", email: "" },
+  client: { nom: "", prenom: "", service: "", societe: "", email: "" },
   type: "studio",
   duree: "",
   options: defaultOptions("studio"),
@@ -41,7 +41,7 @@ function fromDevis(d: Devis): Form {
   return {
     projet: d.projet,
     clientId: d.clientId || "",
-    client: { ...d.client },
+    client: { prenom: "", service: "", ...d.client },
     type: v.type,
     duree: v.duree ? fmtMin(v.duree) : "",
     options: { ...v.options },
@@ -111,7 +111,7 @@ export default function DevisEditor({ id }: { id?: string }) {
   function pickClient(cid: string) {
     const c = clients.find((x) => x.id === cid);
     if (!c) { set("clientId", ""); return; }
-    setForm((f) => ({ ...f, clientId: c.id, client: { societe: c.societe, nom: c.contact || f.client.nom, email: c.email || f.client.email } }));
+    setForm((f) => ({ ...f, clientId: c.id, client: { ...f.client, societe: c.societe, nom: c.contact || f.client.nom, email: c.email || f.client.email } }));
   }
 
   async function save() {
@@ -154,7 +154,7 @@ export default function DevisEditor({ id }: { id?: string }) {
     const c = form.client;
     const L: string[] = [];
     L.push(`Objet : Devis ${devis?.numero ?? ""}${cur ? ` (v${cur.v})` : ""} – ${form.projet || "votre projet vidéo"}`, "");
-    L.push(c.nom ? `Bonjour ${c.nom.split(" ")[0]},` : "Bonjour,", "");
+    L.push(c.prenom || c.nom ? `Bonjour ${c.prenom || c.nom.split(" ")[0]},` : "Bonjour,", "");
     L.push(`Merci pour votre confiance. Vous trouverez ci-dessous notre proposition pour « ${form.projet || "votre projet"} ».`, "");
     calc.lines.forEach((l) => L.push(`  • ${l.label}${l.sub ? ` (${l.sub})` : ""} : ${eur(l.amount, true)}`));
     L.push("", `Total HT : ${eur(calc.total, true)}`, `TVA (${payload.version.tva} %) : ${eur(tvaAmt, true)}`, `Total TTC : ${eur(calc.total + tvaAmt, true)}`, "");
@@ -204,8 +204,12 @@ export default function DevisEditor({ id }: { id?: string }) {
               )}
               <div className="g3">
                 <label className="f"><span>Société <span className="req">*</span></span><input type="text" id="societe" value={form.client.societe} onChange={(e) => setClient("societe", e.target.value)} /></label>
-                <label className="f">Contact<input type="text" id="contact" value={form.client.nom} onChange={(e) => setClient("nom", e.target.value)} /></label>
+                <label className="f">Service<input type="text" id="service" value={form.client.service} onChange={(e) => setClient("service", e.target.value)} /></label>
                 <label className="f">E-mail<input type="email" id="email" value={form.client.email} onChange={(e) => setClient("email", e.target.value)} /></label>
+              </div>
+              <div className="g3">
+                <label className="f">Prénom<input type="text" id="prenom" value={form.client.prenom} onChange={(e) => setClient("prenom", e.target.value)} /></label>
+                <label className="f">Nom<input type="text" id="contact" value={form.client.nom} onChange={(e) => setClient("nom", e.target.value)} /></label>
               </div>
               {form.client.societe.trim() && (!matched ? (
                 <p className="banner warn" style={{ margin: 0 }}><span>Ce client n'a pas de fiche : le contrat-cadre n'est pas suivi. <Link href={`/clients/nouveau?societe=${encodeURIComponent(form.client.societe.trim())}`} target="_blank">Créer la fiche</Link></span></p>

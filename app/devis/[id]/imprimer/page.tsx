@@ -45,7 +45,8 @@ export default async function Imprimer({ params, searchParams }: { params: Promi
           <div>
             <h4>Client</h4>
             <p><b>{d.client.societe || d.client.nom}</b></p>
-            {d.client.societe && d.client.nom && <p>{d.client.nom}</p>}
+            {d.client.societe && (d.client.nom || d.client.prenom) && <p>{[d.client.prenom, d.client.nom].filter(Boolean).join(" ")}</p>}
+            {d.client.service && <p>{d.client.service}</p>}
             {d.client.email && <p>{d.client.email}</p>}
           </div>
         </div>
