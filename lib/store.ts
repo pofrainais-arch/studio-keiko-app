@@ -31,7 +31,14 @@ async function load<T>(name: string): Promise<Loaded<T>> {
         throw e;
       }
       // Keying the URL on the ETag keeps any cache from serving an older copy.
-      const res = await get(`${url}?v=${encodeURIComponent(normEtag(etag))}`, { access: "private", useCache: false });
+      let res: Awaited<ReturnType<typeof get>>;
+      try {
+        res = await get(`${url}?v=${encodeURIComponent(normEtag(etag))}`, { access: "private", useCache: false });
+      } catch (e: unknown) {
+        // The blob can briefly vanish while another request is overwriting it: try again.
+        if (errName(e) === "BlobNotFoundError" && attempt < 4) { await new Promise((r) => setTimeout(r, 250 * (attempt + 1))); continue; }
+        throw e;
+      }
       if (!res || res.statusCode !== 200 || !res.stream) throw new Error(`Lecture de ${name} impossible (${res?.statusCode ?? 404})`);
       const text = await new Response(res.stream as ReadableStream).text();
       if (normEtag(res.blob.etag) === normEtag(etag)) return { doc: JSON.parse(text), etag };
