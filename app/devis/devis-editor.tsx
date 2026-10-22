@@ -15,6 +15,7 @@ type Form = {
   duree: string;
   options: Partial<Record<OptionId, boolean>>;
   postprod: string;
+  complements: { type: TypeId; duree: string; options: Partial<Record<OptionId, boolean>>; postprod: string }[];
   extras: { desc: string; montant: string }[];
   remise: string;
   tva: string;
@@ -30,6 +31,7 @@ const blank = (): Form => ({
   duree: "",
   options: defaultOptions("studio"),
   postprod: "",
+  complements: [],
   extras: [],
   remise: "",
   tva: "20",
@@ -47,6 +49,7 @@ function fromDevis(d: Devis): Form {
     duree: v.duree ? fmtMin(v.duree) : "",
     options: { ...v.options },
     postprod: v.postprod ? String(v.postprod) : "",
+    complements: (v.complements || []).map((c) => ({ type: c.type, duree: c.duree ? fmtMin(c.duree) : "", options: { ...c.options }, postprod: c.postprod ? String(c.postprod) : "" })),
     extras: v.extras.map((e) => ({ desc: e.desc, montant: String(e.montant) })),
     remise: v.remise ? String(v.remise) : "",
     tva: String(v.tva),
@@ -65,6 +68,7 @@ function toPayload(f: Form, clientId = "") {
       duree: parseDuree(f.duree) || 0,
       options: f.options,
       postprod: +f.postprod.replace(",", ".") || 0,
+      complements: f.complements.map((c) => ({ type: c.type, duree: parseDuree(c.duree) || 0, options: c.options, postprod: +c.postprod.replace(",", ".") || 0 })),
       extras: f.extras.map((e) => ({ desc: e.desc, montant: +e.montant.replace(",", ".") || 0 })),
       remise: +f.remise.replace(",", ".") || 0,
       tva: f.tva === "" ? 20 : +f.tva.replace(",", "."),
@@ -99,7 +103,7 @@ export default function DevisEditor({ id }: { id?: string }) {
   const matched = clients.find((c) => c.id === form.clientId) || (societeKey ? clients.find((c) => c.societe.trim().toLowerCase() === societeKey) : undefined);
   const payload = toPayload(form, matched?.id || "");
   const calc = useMemo(
-    () => price({ duree: payload.version.duree, options: payload.version.options, postprod: payload.version.postprod, extras: payload.version.extras, ajust: -payload.version.remise }),
+    () => price({ type: payload.version.type, complements: payload.version.complements, duree: payload.version.duree, options: payload.version.options, postprod: payload.version.postprod, extras: payload.version.extras, ajust: -payload.version.remise }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [JSON.stringify(payload.version)]
   );
@@ -275,6 +279,39 @@ export default function DevisEditor({ id }: { id?: string }) {
                 ))}
               </div>
             </fieldset>
+
+            {form.complements.map((c, i) => {
+              const setC = (patch: Partial<Form["complements"][number]>) => set("complements", form.complements.map((y, j) => (j === i ? { ...y, ...patch } : y)));
+              return (
+                <fieldset key={i}>
+                  <legend className="eyebrow">Prestation {i + 2}</legend>
+                  <div className="chips" role="group" aria-label={`Type de la prestation ${i + 2}`}>
+                    {TYPES.map((t) => (
+                      <button key={t.id} type="button" className="chip" aria-pressed={c.type === t.id} onClick={() => setC({ type: t.id, options: defaultOptions(t.id) })}>{t.label}</button>
+                    ))}
+                  </div>
+                  <div className="g2">
+                    <label className="f">Durée de la vidéo finale
+                      <input type="text" className="dur" inputMode="decimal" value={c.duree} onChange={(e) => setC({ duree: e.target.value })} placeholder="ex. 12 ou 12:30" />
+                    </label>
+                    <label className="f">Post-production (heures)
+                      <input type="number" min="0" step="0.5" value={c.postprod} onChange={(e) => setC({ postprod: e.target.value })} placeholder="0" />
+                    </label>
+                  </div>
+                  <div className="checks">
+                    {OPTIONS.map((o) => (
+                      <label key={o.id} className="check">
+                        <input type="checkbox" checked={!!c.options[o.id]} onChange={(e) => setC({ options: { ...c.options, [o.id]: e.target.checked } })} />
+                        <span>{o.label}<span className="hint" style={{ display: "block" }}>{o.desc}</span></span>
+                        <span className="p">{o.price != null ? eur(o.price) : "selon durée"}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <div><button type="button" className="btn small danger" onClick={() => set("complements", form.complements.filter((_, j) => j !== i))}>Retirer cette prestation</button></div>
+                </fieldset>
+              );
+            })}
+            <div><button type="button" className="btn small" onClick={() => set("complements", [...form.complements, { type: "studio", duree: "", options: defaultOptions("studio"), postprod: "" }])}>+ Ajouter une prestation (ex. une vidéo en plus du webinaire)</button></div>
 
             <fieldset>
               <legend className="eyebrow">Prestations additionnelles</legend>

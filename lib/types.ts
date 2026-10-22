@@ -1,4 +1,4 @@
-import type { Line, OptionId, TypeId } from "./pricing";
+import type { Complement, Line, OptionId, TypeId } from "./pricing";
 
 export type DevisStatut = "brouillon" | "envoye" | "accepte" | "refuse";
 
@@ -9,6 +9,7 @@ export type DevisVersion = {
   duree: number;
   options: Partial<Record<OptionId, boolean>>;
   postprod: number;
+  complements?: Complement[]; // prestations supplémentaires (devis multi-prestations)
   extras: { desc: string; montant: number }[];
   remise: number; // € HT, positive = remise
   tva: number; // %
@@ -97,6 +98,7 @@ export type Realisation = {
   formats?: number;
   lien?: string;
   notes?: string;
+  complements?: Complement[]; // issu d'un devis multi-prestations
   valeur: number; // valorisation grille HT, figée à l'enregistrement
   detail: Line[];
   devisId?: string;

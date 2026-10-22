@@ -36,7 +36,11 @@ export const defaultOptions = (type: TypeId): Partial<Record<OptionId, true>> =>
 
 export type Line = { label: string; sub?: string; amount: number };
 
+export type Complement = { type: TypeId; duree: number; options: Partial<Record<OptionId, boolean>>; postprod: number };
+
 export type PricingInput = {
+  type?: TypeId;
+  complements?: Complement[]; // prestations supplémentaires d'un devis multi-prestations
   duree: number; // minutes, vidéo finale
   options: Partial<Record<OptionId, boolean>>;
   postprod: number; // heures
@@ -75,13 +79,21 @@ export function gridLines(duree: number): Line[] {
   return out;
 }
 
-export function price(input: PricingInput): { lines: Line[]; total: number } {
+function prestaLines(duree: number, options: Partial<Record<OptionId, boolean>>, postprod: number): Line[] {
   const lines: Line[] = [];
   for (const o of OPTIONS) {
-    if (o.id !== "grille" && input.options[o.id] && o.price != null) lines.push({ label: o.label, sub: "forfait", amount: o.price });
+    if (o.id !== "grille" && options[o.id] && o.price != null) lines.push({ label: o.label, sub: "forfait", amount: o.price });
   }
-  if (input.options.grille) lines.push(...gridLines(input.duree));
-  if (+input.postprod > 0) lines.push({ label: "Post-production", sub: `${String(+input.postprod).replace(".", ",")} h × ${POSTPROD_RATE} €`, amount: +input.postprod * POSTPROD_RATE });
+  if (options.grille) lines.push(...gridLines(duree));
+  if (+postprod > 0) lines.push({ label: "Post-production", sub: `${String(+postprod).replace(".", ",")} h × ${POSTPROD_RATE} €`, amount: +postprod * POSTPROD_RATE });
+  return lines;
+}
+
+export function price(input: PricingInput): { lines: Line[]; total: number } {
+  const comps = input.complements ?? [];
+  const tag = (n: number, t: TypeId | undefined, ls: Line[]) => (comps.length ? ls.map((l) => ({ ...l, label: `${n}. ${typeLabel(t)} – ${l.label}` })) : ls);
+  const lines: Line[] = tag(1, input.type, prestaLines(input.duree, input.options, input.postprod));
+  comps.forEach((c, i) => lines.push(...tag(i + 2, c.type, prestaLines(c.duree, c.options || {}, c.postprod))));
   for (const e of input.extras ?? []) {
     if (e.desc || +e.montant) lines.push({ label: e.desc || "Prestation additionnelle", amount: +e.montant || 0 });
   }

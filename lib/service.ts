@@ -1,6 +1,6 @@
 import "server-only";
 import { mutate, newId, readAll } from "./store";
-import { price, todayISO, type TypeId } from "./pricing";
+import { price, todayISO, type Complement, type TypeId } from "./pricing";
 import { defaultBdc } from "./legal";
 import type { Bdc, Client, Devis, DevisVersion, Realisation } from "./types";
 
@@ -12,11 +12,17 @@ export class UserError extends Error {}
 
 // ---------- devis ----------
 
-export type VersionInput = Pick<DevisVersion, "type" | "duree" | "options" | "postprod" | "extras" | "remise" | "tva" | "validite" | "remarques">;
+export type VersionInput = Pick<DevisVersion, "type" | "duree" | "options" | "postprod" | "complements" | "extras" | "remise" | "tva" | "validite" | "remarques">;
 export type DevisInput = { projet: string; client: Devis["client"]; clientId?: string; version: VersionInput };
 
+const cleanComplements = (c?: Complement[]): Complement[] =>
+  (c || []).map((x) => ({ type: x.type, duree: +x.duree || 0, options: x.options || {}, postprod: +x.postprod || 0 }));
+
 function buildVersion(v: number, input: VersionInput, by: string): DevisVersion {
+  const complements = cleanComplements(input.complements);
   const { lines, total } = price({
+    type: input.type,
+    complements,
     duree: +input.duree || 0,
     options: input.options || {},
     postprod: +input.postprod || 0,
@@ -30,6 +36,7 @@ function buildVersion(v: number, input: VersionInput, by: string): DevisVersion 
     duree: +input.duree || 0,
     options: input.options || {},
     postprod: +input.postprod || 0,
+    complements,
     extras: (input.extras || []).filter((e) => e.desc || +e.montant).map((e) => ({ desc: String(e.desc || ""), montant: +e.montant || 0 })),
     remise: +input.remise || 0,
     tva: input.tva == null ? 20 : +input.tva,
@@ -140,7 +147,9 @@ export type RealisationInput = Omit<Realisation, "id" | "valeur" | "detail" | "c
 
 function computeRealisation(input: RealisationInput): Pick<Realisation, "valeur" | "detail" | "facture" | "ajust" | "entite" | "refFact"> {
   const ext = input.nature === "externe";
-  const { lines, total } = price({ duree: +input.duree || 0, options: input.options || {}, postprod: +input.postprod || 0, ajust: ext ? +input.ajust || 0 : 0 });
+  const comps = input.complements || [];
+  const mainDuree = Math.max(0, (+input.duree || 0) - comps.reduce((s, c) => s + (+c.duree || 0), 0));
+  const { lines, total } = price({ type: input.type, complements: comps, duree: mainDuree, options: input.options || {}, postprod: +input.postprod || 0, ajust: ext ? +input.ajust || 0 : 0 });
   return {
     valeur: total,
     detail: lines,
@@ -176,7 +185,7 @@ export async function updateRealisation(id: string, input: RealisationInput): Pr
     const i = doc.items.findIndex((x) => x.id === id);
     if (i < 0) throw new UserError("Réalisation introuvable.");
     const old = doc.items[i];
-    doc.items[i] = { ...old, ...input, ...computeRealisation(input), id, createdAt: old.createdAt, updatedAt: new Date().toISOString() };
+    doc.items[i] = { ...old, ...input, ...computeRealisation({ complements: old.complements, ...input }), id, createdAt: old.createdAt, updatedAt: new Date().toISOString() };
     return doc.items[i];
   });
 }
@@ -199,7 +208,8 @@ async function upsertRealisationFromDevis(d: Devis, by: string): Promise<string>
       date: existing?.date || todayISO(),
       demandeur: d.client.societe || d.client.nom,
       type: v.type as TypeId,
-      duree: v.duree,
+      duree: v.duree + (v.complements || []).reduce((s, c) => s + c.duree, 0),
+      complements: v.complements?.length ? v.complements : undefined,
       statut: existing?.statut || "cours",
       options: v.options,
       postprod: v.postprod,
