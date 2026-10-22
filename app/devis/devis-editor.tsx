@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/client";
 import { OPTIONS, TYPES, defaultOptions, eur, fmtMin, frDate, parseDuree, price, type OptionId, type TypeId } from "@/lib/pricing";
+import { FACTURATION_EMAIL } from "@/lib/legal";
 import { STATUT_LABEL, type Client, type Devis } from "@/lib/types";
 
 type Form = {
@@ -160,6 +161,31 @@ export default function DevisEditor({ id }: { id?: string }) {
     L.push("", `Total HT : ${eur(calc.total, true)}`, `TVA (${payload.version.tva} %) : ${eur(tvaAmt, true)}`, `Total TTC : ${eur(calc.total + tvaAmt, true)}`, "");
     L.push(`Ce devis est valable ${payload.version.validite} jours. N'hésitez pas à revenir vers moi pour tout ajustement.`, "", "Bien à vous,", "Studio vidéo Keiko – Ofi Invest");
     return L.join("\n");
+  }
+  const [prestaDate, setPrestaDate] = useState(() => new Date().toISOString().slice(0, 10));
+  function factureMail() {
+    const c = form.client;
+    const contact = [c.prenom, c.nom].filter(Boolean).join(" ");
+    const pad = (s: string) => s || "à compléter";
+    const L = [
+      "Bonjour Sylvie,", "", `Voici les informations pour facturer ${form.projet || "la prestation"} (${devis?.numero ?? ""}${cur ? ` v${cur.v}` : ""}).`, "",
+      `Entité facturée : ${pad(c.societe)}`,
+      `Adresse entité facturée : ${pad(matched?.siege || "")}`,
+      `SIREN entité facturée : ${pad(matched?.siren || "")}`,
+      `TVA intracommunautaire entité facturée : ${pad(matched?.tva || "")}`,
+      `Date de la prestation : ${frDate(prestaDate)}`,
+      `Dénomination précise de la prestation : ${form.projet}`,
+      `Quantité du service rendu : 1`,
+      `Prix HT de chaque prestation : ${eur(calc.total, true)}`,
+      `Montant total HT : ${eur(calc.total, true)}`,
+      "", "Détails :",
+      ...calc.lines.map((l) => `  - ${l.label}${l.sub ? ` (${l.sub})` : ""} : ${eur(l.amount, true)}`),
+      "", `Commentaires : ${[form.projet, contact && `demandeur : ${contact}`, c.service, c.email].filter(Boolean).join(", ")}`,
+      `Facture à envoyer à : ${pad(matched?.email || c.email)}`,
+      "", "Merci,", "Studio vidéo Keiko – Ofi Invest",
+    ];
+    const subject = `Facture à émettre – ${c.societe} – ${devis?.numero ?? ""}`;
+    window.location.href = `mailto:${FACTURATION_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(L.join("\n"))}`;
   }
   async function copyEmail() {
     try { await navigator.clipboard.writeText(emailText()); setMsg({ t: "Texte de l'e-mail copié.", ok: true }); }
@@ -323,6 +349,14 @@ export default function DevisEditor({ id }: { id?: string }) {
                       <div className="actions"><Link className="btn small primary" href={`/devis/${devis.id}/bdc`}>Créer le bon de commande</Link></div>
                     )}
                     {cur.statut === "accepte" && !matched?.contratSigneLe && <p className="hint" style={{ margin: 0 }}>Aucun contrat-cadre signé suivi pour ce client.</p>}
+                  </div>
+                )}
+                {cur.statut === "accepte" && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, borderTop: "1px solid var(--line)", paddingTop: 12 }}>
+                    <div className="eyebrow">Facturation</div>
+                    <label className="f">Date de la prestation<input type="date" value={prestaDate} onChange={(e) => setPrestaDate(e.target.value)} /></label>
+                    <div className="actions"><button className="btn small primary" disabled={dirty} onClick={factureMail}>Envoyer facture</button></div>
+                    <p className="hint" style={{ margin: 0 }}>Ouvre un e-mail prérempli avec les informations de facturation ; vous relisez puis envoyez.{!matched?.siren && " La fiche client n'a pas de SIREN ni de TVA : complétez-la avant."}</p>
                   </div>
                 )}
                 <div className="actions">

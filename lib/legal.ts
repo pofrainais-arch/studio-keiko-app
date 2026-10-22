@@ -5,6 +5,9 @@ import type { Bdc, Client, DevisVersion } from "./types";
 
 export const BLANK = "[●]";
 
+// Adresse du service facturation (Sylvie) ; vide = le destinataire est saisi dans la messagerie.
+export const FACTURATION_EMAIL = "";
+
 export const OFI = {
   nom: "OFI INVEST ASSET MANAGEMENT",
   siege: "127-129, quai du Président Roosevelt, 92130 Issy-les-Moulineaux",
