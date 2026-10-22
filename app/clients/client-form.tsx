@@ -8,7 +8,7 @@ import { frDate } from "@/lib/pricing";
 import type { Client } from "@/lib/types";
 
 type Form = Omit<Client, "id" | "createdAt" | "createdBy" | "updatedAt" | "contratSigneLe" | "contratLien" | "notes"> & { contratSigneLe: string; contratLien: string; notes: string };
-const blank = (societe = ""): Form => ({ societe, forme: "", capital: "", siege: "", rcsVille: "", rcsNumero: "", representant: "", fonction: "", contact: "", email: "", contratSigneLe: "", contratLien: "", notes: "" });
+const blank = (societe = ""): Form => ({ societe, forme: "", capital: "", siege: "", siren: "", tva: "", representant: "", fonction: "", contact: "", email: "", contratSigneLe: "", contratLien: "", notes: "" });
 const fromClient = (c: Client): Form => ({ ...blank(), ...c, contratSigneLe: c.contratSigneLe || "", contratLien: c.contratLien || "", notes: c.notes || "" });
 
 function Inner({ id }: { id?: string }) {
@@ -75,8 +75,8 @@ function Inner({ id }: { id?: string }) {
             </div>
             <label className="f">Siège social<input type="text" id="siege" value={form.siege} onChange={(e) => set("siege", e.target.value)} placeholder="adresse complète" /></label>
             <div className="g2">
-              <label className="f">RCS de (ville)<input type="text" id="rcsVille" value={form.rcsVille} onChange={(e) => set("rcsVille", e.target.value)} placeholder="ex. Paris" /></label>
-              <label className="f">Numéro RCS<input type="text" id="rcsNumero" value={form.rcsNumero} onChange={(e) => set("rcsNumero", e.target.value)} placeholder="ex. 384 940 342" /></label>
+              <label className="f">SIREN<input type="text" id="siren" value={form.siren} onChange={(e) => set("siren", e.target.value)} placeholder="ex. 781 452 511" /></label>
+              <label className="f">N° de TVA intracommunautaire<input type="text" id="tva" value={form.tva} onChange={(e) => set("tva", e.target.value)} placeholder="ex. FR47 781 452 511" /></label>
             </div>
             <div className="g2">
               <label className="f">Représentée par<input type="text" id="representant" value={form.representant} onChange={(e) => set("representant", e.target.value)} /></label>

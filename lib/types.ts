@@ -28,8 +28,8 @@ export type Client = {
   forme: string; // forme sociale, ex. « société anonyme »
   capital: string;
   siege: string;
-  rcsVille: string;
-  rcsNumero: string;
+  siren: string;
+  tva: string; // n° de TVA intracommunautaire
   representant: string;
   fonction: string;
   contact: string;

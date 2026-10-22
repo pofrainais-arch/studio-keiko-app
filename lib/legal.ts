@@ -100,7 +100,7 @@ export function contratInfo(signeLe?: string, today = new Date()) {
 
 export const orBlank = (v?: string) => (v && v.trim() ? v.trim() : BLANK);
 
-export function clientPhrase(c: Pick<Client, "societe" | "forme" | "capital" | "siege" | "rcsVille" | "rcsNumero" | "representant"> | null, fallbackName: string) {
+export function clientPhrase(c: Pick<Client, "societe" | "forme" | "capital" | "siege" | "siren" | "tva" | "representant"> | null, fallbackName: string) {
   const nom = c?.societe?.trim() || fallbackName || "[Dénomination sociale]";
-  return `${nom}, ${orBlank(c?.forme)} au capital de ${orBlank(c?.capital)} euros, dont le siège social est situé ${orBlank(c?.siege)}, immatriculée au RCS de ${orBlank(c?.rcsVille)} sous le numéro ${orBlank(c?.rcsNumero)}, représentée par ${orBlank(c?.representant)}, dûment habilité aux fins des présentes,`;
+  return `${nom}, ${orBlank(c?.forme)} au capital de ${orBlank(c?.capital)} euros, dont le siège social est situé ${orBlank(c?.siege)}, immatriculée sous le numéro SIREN ${orBlank(c?.siren)}, numéro de TVA intracommunautaire ${orBlank(c?.tva)}, représentée par ${orBlank(c?.representant)}, dûment habilité aux fins des présentes,`;
 }
