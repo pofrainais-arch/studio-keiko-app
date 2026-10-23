@@ -216,7 +216,7 @@ export default function Dashboard() {
       )}
 
       <div className="kpis">
-        <div className="kpi"><span className="eyebrow">vidéos réalisées</span><span className="v">{rows.length}</span><span className="d">{pl(ext.length, "externe")} · {pl(int.length, "interne")} · {pl(par.length, "partenaire")}{fmts ? ` · + ${fmts} déclinaisons` : ""}</span></div>
+        <div className="kpi"><span className="eyebrow">vidéos réalisées</span><span className="v">{rows.length}<span style={{ fontSize: "0.5em", fontWeight: 500, color: "var(--ink-soft)", marginLeft: 8 }}>· {fmtMin(mins)} min</span></span><span className="d">{pl(ext.length, "externe")} · {pl(int.length, "interne")} · {pl(par.length, "partenaire")}{fmts ? ` · + ${fmts} déclinaisons` : ""}</span></div>
         <div className="kpi"><span className="eyebrow">facturé HT (externe)</span><span className="v" style={{ color: "var(--accent)" }}>{eur(F)}</span><span className="d">{pl(new Set(ext.map((r) => r.demandeur)).size, "client")}</span></div>
         <div className="kpi"><span className="eyebrow">valeur interne HT</span><span className="v" style={{ color: "var(--int-ink)" }}>{eur(I)}</span><span className="d">{pl(new Set(int.map((r) => r.demandeur)).size, "service")} Ofi Invest, non facturé</span></div>
         <div className="kpi"><span className="eyebrow">valeur partenaires HT</span><span className="v" style={{ color: "var(--par-ink)" }}>{eur(P)}</span><span className="d">{pl(new Set(par.map((r) => r.demandeur)).size, "partenaire")}, non facturé</span></div>
