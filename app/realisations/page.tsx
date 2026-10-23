@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client";
+import { youtubeId, youtubeThumb } from "@/lib/video";
 import { TYPES, eur, fmtMin, frDate, typeLabel } from "@/lib/pricing";
 import type { Realisation } from "@/lib/types";
 
@@ -52,8 +53,20 @@ export default function RealisationsList() {
                 {rows.map((r) => (
                   <tr key={r.id} onClick={() => router.push(`/realisations/${r.id}`)}>
                     <td className="mono" style={{ whiteSpace: "nowrap" }}>{frDate(r.date)}</td>
-                    <td><div className="t-title"><Link href={`/realisations/${r.id}`} onClick={(e) => e.stopPropagation()}>{r.titre}</Link></div>
-                      <div className="t-sub">{[r.demandeur, r.entite, r.equipe?.join(", ")].filter(Boolean).join(" · ")}</div></td>
+                    <td><div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                      {r.lien && (() => {
+                        const yt = youtubeId(r.lien);
+                        return yt ? (
+                          <a href={r.lien} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} aria-label={`Voir la vidéo : ${r.titre}`} style={{ flex: "none" }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={youtubeThumb(yt)} alt="" width={96} height={54} loading="lazy" style={{ display: "block", width: 96, height: 54, objectFit: "cover", borderRadius: 6 }} />
+                          </a>
+                        ) : null;
+                      })()}
+                      <div><div className="t-title"><Link href={`/realisations/${r.id}`} onClick={(e) => e.stopPropagation()}>{r.titre}</Link></div>
+                        <div className="t-sub">{[r.demandeur, r.entite, r.equipe?.join(", ")].filter(Boolean).join(" · ")}</div>
+                        {r.lien && !youtubeId(r.lien) && <div className="t-sub"><a href={r.lien} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>Voir la vidéo ↗</a></div>}</div>
+                    </div></td>
                     <td>{r.nature === "externe" ? <span className="pill ext">Externe</span> : r.nature === "partenaire" ? <span className="pill par">Partenaire</span> : <span className="pill int">Interne</span>}</td>
                     <td>{typeLabel(r.type)}</td>
                     <td className="r">{fmtMin(r.duree)}</td>

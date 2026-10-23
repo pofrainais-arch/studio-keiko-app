@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/client";
+import { youtubeId, youtubeThumb } from "@/lib/video";
 import { OPTIONS, TYPES, defaultOptions, eur, fmtMin, parseDuree, price, todayISO, type OptionId, type TypeId } from "@/lib/pricing";
 import type { Realisation } from "@/lib/types";
 
@@ -204,7 +205,14 @@ export default function RealisationForm({ id }: { id?: string }) {
                 </div>
                 <div className="g2">
                   <label className="f">Déclinaisons livrées (formats, langues)<input type="number" id="formats" min="0" value={form.formats} onChange={(e) => set("formats", e.target.value)} placeholder="0" /></label>
-                  <label className="f">Lien vers la vidéo<input type="url" id="lien" value={form.lien} onChange={(e) => set("lien", e.target.value)} placeholder="https://…" /></label>
+                  <label className="f">Lien vers la vidéo<input type="url" id="lien" value={form.lien} onChange={(e) => set("lien", e.target.value)} placeholder="https://…" />
+                    {youtubeId(form.lien) && (
+                      <a href={form.lien} target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", marginTop: 6 }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={youtubeThumb(youtubeId(form.lien)!)} alt="Aperçu de la vidéo" width={160} height={90} style={{ display: "block", borderRadius: 6 }} />
+                      </a>
+                    )}
+                  </label>
                 </div>
                 <label className="f">Notes<textarea id="notes" value={form.notes} onChange={(e) => set("notes", e.target.value)} /></label>
               </div>
