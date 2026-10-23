@@ -34,6 +34,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .bar{background:var(--navy);color:var(--on-navy);position:sticky;top:0;z-index:10;box-shadow:var(--shadow)}
 .bar-in{max-width:1180px;margin:0 auto;padding:12px max(16px,env(safe-area-inset-right)) 12px max(16px,env(safe-area-inset-left));display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:space-between}
 .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+.logo{flex:none;display:block;border-radius:9px}
 .rec{width:10px;height:10px;border-radius:50%;background:#F37A6E;box-shadow:0 0 0 3px rgba(243,122,110,.3)}
 .brand h1{font-size:18px;color:var(--on-navy)}
 .brand .tag{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--on-navy-soft)}

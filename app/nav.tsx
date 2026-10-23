@@ -22,7 +22,8 @@ export default function Nav({ name }: { name: string }) {
     <header className="bar">
       <div className="bar-in">
         <Link href="/" className="brand">
-          <span className="rec" aria-hidden="true" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icon.svg" alt="" width={38} height={38} className="logo" />
           <div>
             <h1>Ofi Studio</h1>
             <div className="tag">Ofi Invest AM · devis & production</div>

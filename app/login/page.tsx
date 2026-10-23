@@ -24,7 +24,7 @@ export default function Login() {
     <main className="login">
       <form className="panel" onSubmit={submit}>
         <div className="panel-head" style={{ background: "var(--navy)", color: "var(--on-navy)", borderRadius: "10px 10px 0 0" }}>
-          <div className="brand"><span className="rec" /><h1 style={{ fontSize: 18, color: "var(--on-navy)" }}>Ofi Studio</h1></div>
+          <div className="brand">{/* eslint-disable-next-line @next/next/no-img-element */}<img src="/icon.svg" alt="" width={38} height={38} className="logo" /><h1 style={{ fontSize: 18, color: "var(--on-navy)" }}>Ofi Studio</h1></div>
         </div>
         <div className="panel-body">
           <label className="f">Votre prénom<input type="text" id="name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="given-name" required /></label>
