@@ -56,6 +56,14 @@ export function fmtMin(m: number) {
   return `${mm}:${String(ss).padStart(2, "0")}`;
 }
 
+/** Total de minutes en heures et minutes, ex. « 2 h 14 min ». */
+export function fmtHM(m: number) {
+  const t = Math.round(+m || 0);
+  const h = Math.floor(t / 60);
+  const mm = t % 60;
+  return h ? `${h} h ${String(mm).padStart(2, "0")} min` : `${mm} min`;
+}
+
 export function parseDuree(s: string | number): number {
   const v = String(s ?? "").trim().replace(",", ".");
   if (!v) return NaN;

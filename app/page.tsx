@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/client";
-import { eur, fmtMin, frDate, typeLabel } from "@/lib/pricing";
+import { eur, fmtHM, fmtMin, frDate, typeLabel } from "@/lib/pricing";
 import type { Devis, Realisation } from "@/lib/types";
 
 const MONTHS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
@@ -152,7 +152,7 @@ export default function Dashboard() {
   function summary() {
     const L: string[] = [];
     L.push(`Studio vidéo Keiko — activité ${rg.label}${natTxt}`, "");
-    L.push(`• ${pl(rows.length, "vidéo")} réalisée${rows.length > 1 ? "s" : ""}, ${fmtMin(mins)} minutes produites`);
+    L.push(`• ${pl(rows.length, "vidéo")} réalisée${rows.length > 1 ? "s" : ""}, ${fmtHM(mins)} produites`);
     if (ext.length) L.push(`• Externe : ${pl(ext.length, "vidéo")} facturée${ext.length > 1 ? "s" : ""}, ${eur(F)} HT de chiffre d'affaires`);
     if (int.length) L.push(`• Interne : ${pl(int.length, "vidéo")} pour les services d'Ofi Invest, non facturée${int.length > 1 ? "s" : ""}, représentant ${eur(I)} HT au tarif du studio`);
     if (par.length) L.push(`• Partenaires : ${pl(par.length, "vidéo")} réalisée${par.length > 1 ? "s" : ""} pour ${pl(new Set(par.map((r) => r.demandeur)).size, "partenaire")}, non facturée${par.length > 1 ? "s" : ""}, représentant ${eur(P)} HT au tarif du studio`);
@@ -216,7 +216,7 @@ export default function Dashboard() {
       )}
 
       <div className="kpis">
-        <div className="kpi"><span className="eyebrow">vidéos réalisées</span><span className="v">{rows.length}<span style={{ fontSize: "0.5em", fontWeight: 500, color: "var(--ink-soft)", marginLeft: 8 }}>· {fmtMin(mins)} min</span></span><span className="d">{pl(ext.length, "externe")} · {pl(int.length, "interne")} · {pl(par.length, "partenaire")}{fmts ? ` · + ${fmts} déclinaisons` : ""}</span></div>
+        <div className="kpi"><span className="eyebrow">vidéos réalisées</span><span className="v">{rows.length}<span style={{ fontSize: "0.5em", fontWeight: 500, color: "var(--ink-soft)", marginLeft: 8 }}>· {fmtHM(mins)}</span></span><span className="d">{pl(ext.length, "externe")} · {pl(int.length, "interne")} · {pl(par.length, "partenaire")}{fmts ? ` · + ${fmts} déclinaisons` : ""}</span></div>
         <div className="kpi"><span className="eyebrow">facturé HT (externe)</span><span className="v" style={{ color: "var(--accent)" }}>{eur(F)}</span><span className="d">{pl(new Set(ext.map((r) => r.demandeur)).size, "client")}</span></div>
         <div className="kpi"><span className="eyebrow">valeur interne HT</span><span className="v" style={{ color: "var(--int-ink)" }}>{eur(I)}</span><span className="d">{pl(new Set(int.map((r) => r.demandeur)).size, "service")} Ofi Invest, non facturé</span></div>
         <div className="kpi"><span className="eyebrow">valeur partenaires HT</span><span className="v" style={{ color: "var(--par-ink)" }}>{eur(P)}</span><span className="d">{pl(new Set(par.map((r) => r.demandeur)).size, "partenaire")}, non facturé</span></div>
@@ -231,7 +231,7 @@ export default function Dashboard() {
       </div>
 
       <div className="reports">
-        <div className="panel wide"><div className="panel-head"><h3>Par type de réalisation</h3><span className="hint">facturé + valeur non facturée · {fmtMin(mins)} min produites</span></div><div className="panel-body"><HBars items={byType} metric="v" /></div></div>
+        <div className="panel wide"><div className="panel-head"><h3>Par type de réalisation</h3><span className="hint">facturé + valeur non facturée · {fmtHM(mins)} produites</span></div><div className="panel-body"><HBars items={byType} metric="v" /></div></div>
         <div className="panel"><div className="panel-head"><h3>Par service Ofi Invest</h3><span className="hint">valeur interne</span></div><div className="panel-body"><HBars items={byDem} metric="v" /></div></div>
         <div className="panel"><div className="panel-head"><h3>Par entité</h3><span className="hint">valeur interne</span></div><div className="panel-body"><HBars items={byEnt} metric="v" /></div></div>
         <div className="panel"><div className="panel-head"><h3>Par partenaire</h3><span className="hint">valeur offerte</span></div><div className="panel-body"><HBars items={byPar} metric="v" /></div></div>
