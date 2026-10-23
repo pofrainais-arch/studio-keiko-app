@@ -24,8 +24,8 @@ export default function Nav({ name }: { name: string }) {
         <Link href="/" className="brand">
           <span className="rec" aria-hidden="true" />
           <div>
-            <h1>Studio Keiko</h1>
-            <div className="tag">Ofi Invest · devis & production</div>
+            <h1>Ofi Studio</h1>
+            <div className="tag">Ofi Invest AM · devis & production</div>
           </div>
         </Link>
         <nav className="tabs" aria-label="Sections">

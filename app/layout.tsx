@@ -4,9 +4,8 @@ import { getSession } from "@/lib/session";
 import Nav from "./nav";
 
 export const metadata: Metadata = {
-  title: "Studio Keiko",
-  description: "Devis et registre des réalisations du studio vidéo Keiko, Ofi Invest.",
-  icons: { icon: "/icon.svg" },
+  title: "Ofi Studio",
+  description: "Devis et registre des réalisations du studio vidéo Keiko, Ofi Invest AM.",
 };
 export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 
