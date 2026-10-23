@@ -171,6 +171,39 @@ export default function Dashboard() {
   async function copy() {
     try { await navigator.clipboard.writeText(summary()); setMsg("Synthèse copiée."); } catch { setMsg("Copie impossible : sélectionnez le texte."); }
   }
+  async function exportPptx() {
+    setMsg("Préparation de la présentation…");
+    try {
+      const { buildDeck } = await import("@/lib/deck");
+      const byMonth: Record<string, { f: number; i: number; p: number; n: number }> = {};
+      rows.forEach((r) => {
+        const k = r.date.slice(0, 7);
+        byMonth[k] ??= { f: 0, i: 0, p: 0, n: 0 };
+        byMonth[k].f += billed(r); byMonth[k].i += internalVal(r); byMonth[k].p += partnerVal(r); byMonth[k].n++;
+      });
+      const keys = Object.keys(byMonth).sort();
+      const months: { label: string; f: number; i: number; p: number; n: number }[] = [];
+      if (keys.length) {
+        let [y, m] = keys[0].split("-").map(Number);
+        const [ey, em] = keys[keys.length - 1].split("-").map(Number);
+        while (y < ey || (y === ey && m <= em)) {
+          const k = `${y}-${String(m).padStart(2, "0")}`;
+          months.push({ label: `${MONTHS[m - 1]} ${String(y).slice(2)}`, ...(byMonth[k] || { f: 0, i: 0, p: 0, n: 0 }) });
+          if (++m > 12) { m = 1; y++; }
+        }
+      }
+      const toG = (g: G[]) => g.map(({ k, n, v }) => ({ k, n, v }));
+      await buildDeck({
+        label: rg.label, natTxt,
+        nb: { total: rows.length, ext: ext.length, int: int.length, par: par.length },
+        mins, F, I, P,
+        clients: new Set(ext.map((r) => r.demandeur)).size, services: new Set(int.map((r) => r.demandeur)).size, partenaires: new Set(par.map((r) => r.demandeur)).size,
+        months, byType: toG(byType), byService: toG(byDem), byClient: toG(byCli), byPartenaire: toG(byPar),
+        devis: { accepted: accepted.length, decided: decided.length, pending: pending.length, pendingHT: pending.reduce((t, d) => t + lastV(d).totalHT, 0) },
+      });
+      setMsg("Présentation générée : elle se trouve dans vos téléchargements.");
+    } catch (e) { setMsg(`Génération impossible (${(e as Error).message}).`); }
+  }
   function exportCsv() {
     const cols = ["Date", "Nature", "Titre", "Client / service", "Entité", "Type", "Durée (min)", "Statut", "Chiffrage grille HT (€)", "Montant facturé HT (€)", "Valeur interne HT (€)", "Valeur partenaire HT (€)", "N° devis / facture", "Post-prod (h)", "Équipe", "Diffusion", "Déclinaisons", "Lien", "Notes", "Saisi par"];
     const q = (v: unknown) => { const s = v == null ? "" : String(v); return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
@@ -245,6 +278,7 @@ export default function Dashboard() {
           <div className="actions">
             <button className="btn primary" onClick={copy}>Copier la synthèse</button>
             <button className="btn" onClick={exportCsv}>Exporter en CSV (Excel)</button>
+            <button className="btn" onClick={exportPptx}>Présentation PowerPoint</button>
             {msg && <span className="msg ok" role="status">{msg}</span>}
           </div>
         </div>
