@@ -31,6 +31,29 @@ function range(period: PeriodId, from: string, to: string) {
   return { from: "1900-01-01", to: "2999-12-31", label: "depuis le début" };
 }
 
+const parseISO = (s: string) => { const [y, m, d] = s.split("-").map(Number); return { y, m, d }; };
+function shiftMonths(s: string, k: number) {
+  const { y, m, d } = parseISO(s);
+  const last = new Date(y, m - 1 + k + 1, 0).getDate();
+  return iso(new Date(y, m - 1 + k, Math.min(d, last)));
+}
+/** Période précédente comparable : même durée, décalée ; pour une période en cours, mêmes jours écoulés. */
+function prevRange(period: PeriodId, rg: { from: string; to: string }) {
+  if (period === "tout") return null;
+  const today = iso(new Date());
+  const end = rg.to < today ? rg.to : today;
+  if (period === "perso") {
+    if (rg.from < "1901-01-01" || rg.to > "2998-12-31") return null;
+    const n = Math.round((new Date(end + "T00:00:00").getTime() - new Date(rg.from + "T00:00:00").getTime()) / 86400000) + 1;
+    const pe = new Date(new Date(rg.from + "T00:00:00").getTime() - 86400000);
+    const ps = new Date(pe.getTime() - (n - 1) * 86400000);
+    return { from: iso(ps), to: iso(pe), label: "période précédente" };
+  }
+  const k = period === "mois" ? -1 : period === "trim" ? -3 : period === "annee" ? -12 : -12;
+  const label = period === "mois" ? "mois précédent" : period === "trim" ? "trimestre précédent" : period === "annee" ? "même période l'an dernier" : "12 mois précédents";
+  return { from: shiftMonths(rg.from, k), to: shiftMonths(end, k), label };
+}
+
 type G = { k: string; n: number; v: number; f: number; i: number; p: number };
 function group(rows: Realisation[], key: (r: Realisation) => string | string[] | undefined): G[] {
   const m: Record<string, G> = {};
@@ -199,6 +222,12 @@ export default function Dashboard() {
         mins, F, I, P,
         clients: new Set(ext.map((r) => r.demandeur)).size, services: new Set(int.map((r) => r.demandeur)).size, partenaires: new Set(par.map((r) => r.demandeur)).size,
         months, byType: toG(byType), byService: toG(byDem), byClient: toG(byCli), byPartenaire: toG(byPar),
+        prev: (() => {
+          const pr = prevRange(period, rg);
+          if (!pr) return undefined;
+          const pr_rows = (reals || []).filter((r) => r.date >= pr.from && r.date <= pr.to && (nat === "tout" || r.nature === nat));
+          return { label: pr.label, total: pr_rows.length, mins: pr_rows.reduce((t, r) => t + (+r.duree || 0), 0), F: pr_rows.reduce((t, r) => t + billed(r), 0), I: pr_rows.reduce((t, r) => t + internalVal(r), 0), P: pr_rows.reduce((t, r) => t + partnerVal(r), 0) };
+        })(),
         devis: { accepted: accepted.length, decided: decided.length, pending: pending.length, pendingHT: pending.reduce((t, d) => t + lastV(d).totalHT, 0) },
       });
       setMsg("Présentation générée : elle se trouve dans vos téléchargements.");
